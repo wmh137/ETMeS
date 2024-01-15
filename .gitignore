@@ -1,0 +1,4 @@
+*.dat
+*.log
+t.py
+**/__pycache__/
