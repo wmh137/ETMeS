@@ -31,7 +31,7 @@ class Keithley2400(ins):
     def stop(self):
         self.res.write("OUTP 0\n")
         self.flag[0] = False
-    def getNow(self) -> list:
+    def getNow(self):
         if self.flag[0]:
             self.now = [float(elem) for elem in self.res.query(":READ?\n").split(",")]
         else:

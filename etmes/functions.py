@@ -66,6 +66,7 @@ class em():
         for ins in self.__instruments:
             self.__f.write(f",{ins.now2record()}")
         self.__f.write("\n")
+        self.__f.flush()
     def wait(self, inss: list, t: float):
         flag = len(inss)*[False]
         t0 = time.time()

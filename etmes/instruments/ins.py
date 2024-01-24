@@ -16,11 +16,10 @@ class ins():
         else:
             self.name = address
         self.res = None
-        self.flag = []
-        self.setpoint = []
-        self.now = []
-        self.nowName = []
-        self.error = []
+        self.flag = [] # override
+        self.setpoint = [] # override
+        self.now = [] # override
+        self.nowName = [] # override [str]
         self.ONOFF = ["OFF", "ON"]
     def write(self, cmd: str):
         self.res.write(cmd)

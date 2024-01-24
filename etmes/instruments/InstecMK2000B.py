@@ -1,5 +1,11 @@
 from .ins import ins, direction
 import pyvisa as visa
+from enum import IntEnum
+
+class CH(IntEnum):
+    HO = 0 # Heat Only
+    HC = 1 # Heat and Cool
+    CO = 2 # Cool Only
 
 class InstecMK2000B(ins):
     def __init__(self, address: str, name: str = None):
@@ -12,6 +18,8 @@ class InstecMK2000B(ins):
     def insInit(self):
         self.res.write_termination = ''
         self.res.read_termination = '\r\n'
+    def setCH(self, flag: CH):
+        self.res.write(f"TEMP:CHSW {flag:d}\n")
     def setTemp(self, setpoint: float, rate: float):
         self.res.write(f"TEMP:RAMP {setpoint-273.15:f},{rate:f}\n")
         self.setpoint[0] = setpoint
