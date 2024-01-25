@@ -16,10 +16,7 @@ class Keithley2182A(ins):
         self.res.write(f":SENS:CHAN {flag:d}\n:SENS:VOLT:RANG:AUTO ON\n")
         self.flag[0] = flag
     def getNow(self):
-        if self.flag[0]:
-            self.now = [float(self.res.query(":READ?\n"))]
-        else:
-            self.now = [None]
+        self.now = [float(self.res.query(":READ?\n"))]
     def flag2str(self) -> str:
         return f"{self.channel[self.flag[0]]:>20s}"
     def now2str(self) -> str:
