@@ -18,7 +18,7 @@ class Keithley2182A(ins):
     def getNow(self):
         self.now = [float(self.res.query(":READ?\n"))]
     def flag2str(self) -> str:
-        return f"{self.channel[self.flag[0]]:>20s}"
+        return f"{self.channel[self.flag[0]-1]:>20s}"
     def now2str(self) -> str:
         if not ((self.now[0] == None) ):
             return f"{self.now[0]:>19.5e}V"

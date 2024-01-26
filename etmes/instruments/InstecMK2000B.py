@@ -54,7 +54,7 @@ class InstecMK2000B(ins):
             return True
     def crossReach(self, dir: direction) -> bool:
         if not ((self.now[0] == None) | (self.setpoint[0] == None)):
-            if self.setpoint[0] - self.now[0] < self.error[0] * dir:
+            if (self.setpoint[0] - self.now[0]) * dir < self.error[0]:
                 return True
             else:
                 return False

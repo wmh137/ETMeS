@@ -18,11 +18,18 @@ class LakeShore340(ins):
         self.res.read_termination = '\r\n'
         self.res.write(f"RANGE 5\n")
         time.sleep(1)
-    def setTemp(self, setpoint: float, rate: float):
-        self.res.write(f"RAMP 1,1,{rate:f}\nSETP 1,{setpoint:f}\n")
-        time.sleep(2)
+    def setRamp(self, rate: float):
+        if not rate:
+            self.res.write(f"RAMP 1,0\n")
+            self.setpoint[1] = 0
+        else:
+            self.res.write(f"RAMP 1,1,{rate:f}\n")
+            self.setpoint[1] = abs(rate)
+        time.sleep(1)
+    def setTemp(self, setpoint: float):
+        self.res.write(f"SETP 1,{setpoint:f}\n")
+        time.sleep(1)
         self.setpoint[0] = setpoint
-        self.setpoint[1] = abs(rate)
         self.flag[0] = True
     def stop(self):
         self.res.write(f"RANGE 0\n")
@@ -53,7 +60,7 @@ class LakeShore340(ins):
             return True
     def crossReach(self, dir: direction) -> bool:
         if not ((self.now[0] == None) | (self.setpoint[0] == None)):
-            if self.setpoint[0] - self.now[0] < self.error[0] * dir:
+            if (self.setpoint[0] - self.now[0]) * dir < self.error[0]:
                 return True
             else:
                 return False
