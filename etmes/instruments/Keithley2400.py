@@ -7,7 +7,7 @@ class Keithley2400(ins):
         self.flag = [False, False] # output on/off, 2/4 wire
         self.setpoint = [None, None] # source, V/I
         self.now = [None, None] # V, I
-        self.nowName = ["V", "I"]
+        self.nowName = ["V(V)", "I(A)"]
         self.VI = ["VOLT", "CURR"]
         self.wire = ["2W", "4W"]
     def insInit(self):

@@ -6,7 +6,7 @@ class Keithley2182A(ins):
         super().__init__(address, name)
         self.flag = [None] # channel 1/2
         self.now = [None] # V
-        self.nowName = ["V"]
+        self.nowName = ["V(V)"]
         self.channel = ["CH1", "CH2"]
     def insInit(self):
         self.res.write_termination = ''

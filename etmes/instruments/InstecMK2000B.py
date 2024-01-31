@@ -13,7 +13,7 @@ class InstecMK2000B(ins):
         self.flag = [False] # output on/off
         self.setpoint = [None, None] # target temperature, rate
         self.now = [None, None] # temperarure, power
-        self.nowName = ["T", "power"]
+        self.nowName = ["T(K)", "power(%)"]
         self.error = [0.1]
     def insInit(self):
         self.res.write_termination = ''
@@ -31,14 +31,14 @@ class InstecMK2000B(ins):
         self.now[0] = float(self.res.query("TEMP:RTIN?\n").split(":")[2])+273.15
         self.now[1] = float(self.res.query("TEMP:POW?\n"))*100
     def flag2str(self) -> str:
-        return f"{self.ONOFF[self.flag[0]]:>10s}"
+        return f"{self.ONOFF[self.flag[0]]:>20s}"
     def setpoint2str(self) -> str:
         if not ((self.setpoint[0] == None) | (self.setpoint[1] == None)):
             return f"{self.setpoint[0]:>9.3f}K{self.setpoint[1]:>7.2f}K/m"
         else:
             return 20*' '
     def now2str(self) -> str:
-        return f"{self.now[0]:>9.3f}K{self.now[1]:>9.1f}%"
+        return f"{self.now[0]:>9.3f}K{self.now[1]:>+9.1f}%"
     def now2record(self) -> str:
         if not ((self.now[0] == None) | (self.now[1] == None)):
             return f"{self.now[0]:>6.3f},{self.now[1]:>6.3f}"
