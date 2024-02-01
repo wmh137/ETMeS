@@ -52,17 +52,11 @@ class LakeShore340(ins):
             return super().now2record()
     def reach(self) -> bool:
         if not ((self.now[0] == None) | (self.setpoint[0] == None)):
-            if abs(self.now[0] - self.setpoint[0]) < self.error[0]:
-                return True
-            else:
-                return False
+            return abs(self.now[0] - self.setpoint[0]) < self.error[0]
         else:
             return True
     def crossReach(self, dir: direction) -> bool:
         if not ((self.now[0] == None) | (self.setpoint[0] == None)):
-            if (self.setpoint[0] - self.now[0]) * dir < self.error[0]:
-                return True
-            else:
-                return False
+            return (self.setpoint[0] - self.now[0]) * dir < self.error[0]
         else:
             return True
