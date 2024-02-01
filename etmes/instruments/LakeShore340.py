@@ -8,7 +8,7 @@ class LakeShore340(ins):
         self.flag = [False] # output on/off
         self.setpoint = [None, None] # target temperature, rate
         self.now = [None, None] # temperarure, power
-        self.nowName = ["T", "power"]
+        self.nowName = ["T(K)", "power(%)"]
         self.error = [0.1]
     def insInit(self):
         self.res.baud_rate = 9600
@@ -25,10 +25,10 @@ class LakeShore340(ins):
         else:
             self.res.write(f"RAMP 1,1,{rate:f}\n")
             self.setpoint[1] = abs(rate)
-        time.sleep(1)
+        time.sleep(0.5)
     def setTemp(self, setpoint: float):
         self.res.write(f"SETP 1,{setpoint:f}\n")
-        time.sleep(1)
+        time.sleep(0.5)
         self.setpoint[0] = setpoint
         self.flag[0] = True
     def stop(self):
@@ -37,7 +37,7 @@ class LakeShore340(ins):
         self.now[0] = float(self.res.query("KRDG? 0\n"))
         self.now[1] = float(self.res.query("HTR?\n"))
     def flag2str(self) -> str:
-        return f"{self.ONOFF[self.flag[0]]:>10s}"
+        return f"{self.ONOFF[self.flag[0]]:>20s}"
     def setpoint2str(self) -> str:
         if not ((self.setpoint[0] == None) | (self.setpoint[1] == None)):
             return f"{self.setpoint[0]:>9.2f}K{self.setpoint[1]:>7.2f}K/m"
@@ -52,17 +52,11 @@ class LakeShore340(ins):
             return super().now2record()
     def reach(self) -> bool:
         if not ((self.now[0] == None) | (self.setpoint[0] == None)):
-            if abs(self.now[0] - self.setpoint[0]) < self.error[0]:
-                return True
-            else:
-                return False
+            return abs(self.now[0] - self.setpoint[0]) < self.error[0]
         else:
             return True
     def crossReach(self, dir: direction) -> bool:
         if not ((self.now[0] == None) | (self.setpoint[0] == None)):
-            if (self.setpoint[0] - self.now[0]) * dir < self.error[0]:
-                return True
-            else:
-                return False
+            return (self.setpoint[0] - self.now[0]) * dir < self.error[0]
         else:
             return True
