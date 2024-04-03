@@ -1,7 +1,6 @@
 import pyvisa as visa
 from .instruments.ins import ins, direction
-import time, threading
-import sys
+import time, threading, sys
 
 class em():
     def __init__(self):
@@ -13,16 +12,19 @@ class em():
         self.__f = None
         self.__log = open(".log", "w")
     def addInstrument(self, ins: ins):
-        ins.res = self.__rm.open_resource(ins.address)
+        if ins.visa:
+            ins.res = self.__rm.open_resource(ins.address)
+        else:
+            ins.open()
         self.__instruments.append(ins)
         ins.insInit()
     def t(self):
         return time.time()-self.__t0
     def start(self):
-        nameStr = ""
+        nameStr = 20*" "+"|"
         fHeader = "time"
         for ins in self.__instruments:
-            nameStr += ins.name2str()
+            nameStr += ins.name2str()+"|"
             for var in ins.nowName:
                 fHeader += f", {ins.name}_{var}"
         print(f"{nameStr}\n\n\n\n", end='')
@@ -32,11 +34,16 @@ class em():
     def stop(self):
         for ins in self.__instruments:
             ins.stop()
+            if ins.visa:
+                ins.res.close()
+            else:
+                ins.close()
+        self.__rm.close()
         self.__f.close()
         self.__start = False
     def setInterval(self, t: float):
         self.__interval = t
-    def refrashNow(self):
+    def refreshNow(self):
         threads = []
         for ins in self.__instruments:
             th = threading.Thread(target=ins.getNow)
@@ -45,19 +52,19 @@ class em():
             th.start()
         for th in threads:
             th.join()
-    def refrash(self):
+    def refresh(self):
         if not self.__start:
             print("ETMeS is not running!", end="")
             exit()
-        flagStr = ""
-        setpointStr = ""
-        nowStr = ""
+        flagStr = 16*" "+"FLAG|"
+        setpointStr = 12*" "+"SETPOINT|"
+        nowStr = 17*" "+"NOW|"
         for ins in self.__instruments:
-            flagStr += ins.flag2str()
-            setpointStr += ins.setpoint2str()
-        self.refrashNow()
+            flagStr += ins.flag2str()+"|"
+            setpointStr += ins.setpoint2str()+"|"
+        self.refreshNow()
         for ins in self.__instruments:
-            nowStr += ins.now2str()
+            nowStr += ins.now2str()+"|"
         sys.stdout.write("\x1b[3A")
         print(f"{flagStr}\n{setpointStr}\n{nowStr}{self.t():>19.2f}s")
         self.__log.write(f"{nowStr}{self.t():>19.2f}s\n")
@@ -72,7 +79,7 @@ class em():
         t0 = time.time()
         t1 = 0
         while True:
-            self.refrash()
+            self.refresh()
             for i in range(len(inss)):
                 flag[i] = inss[i].reach()
             if all(flag):
@@ -85,7 +92,7 @@ class em():
     def crossWait(self, inss: list, dir: direction, t: float):
         flag = len(inss)*[False]
         while True:
-            self.refrash()
+            self.refresh()
             for i in range(len(inss)):
                 flag[i] = inss[i].crossReach(dir)
             if all(flag):
@@ -93,4 +100,4 @@ class em():
             time.sleep(self.__interval)
         t0 = time.time()
         while time.time() - t0 < t:
-            self.refrash()
+            self.refresh()

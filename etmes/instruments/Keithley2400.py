@@ -2,7 +2,7 @@ from .ins import ins, SM
 import pyvisa as visa
 
 class Keithley2400(ins):
-    def __init__(self, address: str, name: str = None):
+    def __init__(self, address: str, name: str = "Keithley 2400"):
         super().__init__(address, name)
         self.flag = [False, False] # output on/off, 2/4 wire
         self.setpoint = [None, None] # source, V/I
@@ -40,7 +40,7 @@ class Keithley2400(ins):
         return f"{self.ONOFF[self.flag[0]]:>10s}{self.wire[self.flag[1]]:>10s}"
     def setpoint2str(self):
         if not ((self.setpoint[0] == None) | (self.setpoint[1] == None)):
-            return f"{self.setpoint[0]:>10.3e}{self.VI[self.setpoint[1]]:>10s}"
+            return f"{self.setpoint[0]:>10.2e}{self.VI[self.setpoint[1]]:>10s}"
         else:
             return 20*' '
     def now2str(self) -> str:

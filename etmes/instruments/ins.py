@@ -9,24 +9,35 @@ class direction(IntEnum):
     negative = -1
 
 class ins():
-    def __init__(self, address: str, name: str = None):
+    def __init__(self, address: str, name: str = None, visa: bool = True):
         self.address = address
+        self.visa = visa
         if name:
             self.name = name
         else:
             self.name = address
-        self.res = None
+        self.res = None # resource
         self.flag = [] # override
         self.setpoint = [] # override
         self.now = [] # override
         self.nowName = [] # override [str]
         self.ONOFF = ["OFF", "ON"]
     def write(self, cmd: str):
-        self.res.write(cmd)
+        if self.visa:
+            self.res.write(cmd)
+        else:
+            raise Exception(f"non-visa {self.address} ins.write() not defined!")
     def query(self, cmd: str) -> str:
-        return self.res.query(cmd)
+        if self.visa:
+            return self.res.query(cmd)
+        else:
+            raise Exception(f"non-visa {self.address} ins.query() not defined!")
     def insInit(self): # override
         pass
+    def open(self): # override (only&must for self.visa==False)
+        raise Exception(f"non-visa {self.address} ins.open() not defined!")
+    def close(self): # override (only&must for self.visa==False)
+        raise Exception(f"non-visa {self.address} ins.close() not defined!")
     def stop(self): # override
         pass
     def getNow(self): # override
