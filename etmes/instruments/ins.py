@@ -4,7 +4,9 @@ class SM(IntEnum):
     V  = 0
     I  = 1
 
-class direction(IntEnum):
+class waitFlag(IntEnum):
+    none = 0
+    stable = 2
     positive = 1
     negative = -1
 
@@ -52,7 +54,5 @@ class ins():
         return 20*' '
     def now2record(self) -> str: # override
         return len(self.now)*','
-    def reach(self) -> bool: # override
-        return True
-    def crossReach(self, dir: direction) -> bool: # override
+    def reach(self, flag: waitFlag) -> bool: # override
         return True

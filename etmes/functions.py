@@ -1,5 +1,5 @@
 import pyvisa as visa
-from .instruments.ins import ins, direction
+from .instruments.ins import ins, waitFlag
 import time, threading, sys
 
 class em():
@@ -74,22 +74,28 @@ class em():
             self.__f.write(f",{ins.now2record()}")
         self.__f.write("\n")
         self.__f.flush()
-    def wait(self, inss: list, t: float):
-        flag = len(inss)*[False]
+    def wait(self, t: float, inss: list, flags: list):
+        '''wait(time, [ins1, ins2, ...], [waitFlag1, waitFlag2, ...])'''
+        reached = len(inss)*[False]
         t0 = time.time()
         t1 = 0
         while True:
             self.refresh()
             for i in range(len(inss)):
-                flag[i] = inss[i].reach()
-            if all(flag):
+                if flags[i] == waitFlag.none:
+                    reached[i] = True
+                elif flags[i] == waitFlag.stable:
+                    reached[i] = inss[i].reach(flags[i])
+                else:# not stable
+                    reached[i] = reached[i] or inss[i].reach(flags[i])
+            if all(reached):
                 t1 = time.time()
             else:
                 t0 = time.time()
             if t1 - t0 > t:
                 break
             time.sleep(self.__interval)
-    def crossWait(self, inss: list, dir: direction, t: float):
+    '''def crossWait(self, inss: list, dir: direction, t: float):
         flag = len(inss)*[False]
         while True:
             self.refresh()
@@ -100,4 +106,4 @@ class em():
             time.sleep(self.__interval)
         t0 = time.time()
         while time.time() - t0 < t:
-            self.refresh()
+            self.refresh()'''
