@@ -1,4 +1,4 @@
-from .ins import ins, direction
+from .ins import ins, waitFlag
 import pyvisa as visa
 import time
 
@@ -46,7 +46,8 @@ class EastChangingP7050(ins):
             return f"{self.now[0]:>+7.2f}"
         else:
             return super().now2record()
-    def reach(self) -> bool:
-        return abs(self.now[0] - self.setpoint[0]) < self.error[0]
-    def crossReach(self, dir: direction) -> bool:
-        return (self.setpoint[0] - self.now[0]) * dir < self.error[0]
+    def reach(self, flag: waitFlag) -> bool:
+        if flag == waitFlag.stable:
+            return abs(self.now[0] - self.setpoint[0]) < self.error[0]
+        else:
+            return (self.setpoint[0] - self.now[0]) * flag < self.error[0]

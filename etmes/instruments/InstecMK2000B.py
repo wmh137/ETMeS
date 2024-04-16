@@ -1,4 +1,4 @@
-from .ins import ins, direction
+from .ins import ins, waitFlag
 import pyvisa as visa
 from enum import IntEnum
 
@@ -33,24 +33,22 @@ class InstecMK2000B(ins):
     def flag2str(self) -> str:
         return f"{self.ONOFF[self.flag[0]]:>20s}"
     def setpoint2str(self) -> str:
-        if not ((self.setpoint[0] == None) | (self.setpoint[1] == None)):
+        if (self.setpoint[0] != None) and (self.setpoint[1] != None):
             return f"{self.setpoint[0]:>9.3f}K{self.setpoint[1]:>7.2f}K/m"
         else:
             return 20*' '
     def now2str(self) -> str:
         return f"{self.now[0]:>9.3f}K{self.now[1]:>+9.1f}%"
     def now2record(self) -> str:
-        if not ((self.now[0] == None) | (self.now[1] == None)):
+        if (self.now[0] != None) and (self.now[1] != None):
             return f"{self.now[0]:>6.3f},{self.now[1]:>6.3f}"
         else:
             return super().now2record()
-    def reach(self) -> bool:
-        if not ((self.now[0] == None) | (self.setpoint[0] == None)):
-            return abs(self.now[0] - self.setpoint[0]) < self.error[0]
-        else:
-            return True
-    def crossReach(self, dir: direction) -> bool:
-        if not ((self.now[0] == None) | (self.setpoint[0] == None)):
-            return (self.setpoint[0] - self.now[0]) * dir < self.error[0]
+    def reach(self, flag: waitFlag) -> bool:
+        if (self.now[0] != None) and (self.setpoint[0] != None):
+            if flag == waitFlag.stable:
+                return abs(self.now[0] - self.setpoint[0]) < self.error[0]
+            else:
+                return flag * (self.setpoint[0] - self.now[0]) < self.error[0]
         else:
             return True
