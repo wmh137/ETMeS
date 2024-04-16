@@ -21,7 +21,7 @@ class em():
     def t(self):
         return time.time()-self.__t0
     def start(self):
-        nameStr = 20*" "+"|"
+        nameStr = 10*" "+"|"
         fHeader = "time"
         for ins in self.__instruments:
             nameStr += ins.name2str()+"|"
@@ -56,9 +56,9 @@ class em():
         if not self.__start:
             print("ETMeS is not running!", end="")
             exit()
-        flagStr = 16*" "+"FLAG|"
-        setpointStr = 12*" "+"SETPOINT|"
-        nowStr = 17*" "+"NOW|"
+        flagStr = 6*" "+"FLAG|"
+        setpointStr = 2*" "+"SETPOINT|"
+        nowStr = 7*" "+"NOW|"
         for ins in self.__instruments:
             flagStr += ins.flag2str()+"|"
             setpointStr += ins.setpoint2str()+"|"
@@ -86,7 +86,7 @@ class em():
                     reached[i] = True
                 elif flags[i] == waitFlag.stable:
                     reached[i] = inss[i].reach(flags[i])
-                else:# not stable
+                else:
                     reached[i] = reached[i] or inss[i].reach(flags[i])
             if all(reached):
                 t1 = time.time()
@@ -95,15 +95,3 @@ class em():
             if t1 - t0 > t:
                 break
             time.sleep(self.__interval)
-    '''def crossWait(self, inss: list, dir: direction, t: float):
-        flag = len(inss)*[False]
-        while True:
-            self.refresh()
-            for i in range(len(inss)):
-                flag[i] = inss[i].crossReach(dir)
-            if all(flag):
-                break
-            time.sleep(self.__interval)
-        t0 = time.time()
-        while time.time() - t0 < t:
-            self.refresh()'''

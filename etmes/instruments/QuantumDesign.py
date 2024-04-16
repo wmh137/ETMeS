@@ -1,6 +1,5 @@
 from .ins import ins, waitFlag
 import clr
-from enum import Flag, auto
 
 clr.AddReference('etmes/instruments/QDInstrument')
 
@@ -16,14 +15,11 @@ class QuantumDesign(ins):
         self.type = type
         self.port = port
         self.error = [0.05, 1, 0.1]
-        self.waitFlag = QDWaitFlag.none
         self.waitStable = [[1], [1, 4], [1], [1, 2, 3, 7, 8, 9]]
     def open(self):
         self.res = QDInstrumentFactory.GetQDInstrument(self.type, True, self.address, self.port)
     def close(self):# in build
         pass
-    def setWait(self, flag: QDWaitFlag):
-        self.waitFlag = flag
     def setTemp(self, setpoint: float, rate: float, approach: QDInstrumentBase.TemperatureApproach = QDInstrumentBase.TemperatureApproach.FastSettle):# in build
         self.res.SetTemperature(setpoint, rate, approach)
         self.setpoint[0] = [setpoint, approach]
@@ -113,6 +109,15 @@ class QuantumDesign(ins):
                 else:
                     reached[i] = True
         return all(reached)
+class QuantumDesignPPMS(QuantumDesign):
+    def __init__(self, address: str, port: int = 11000, name: str  = "Quantum Design PPMS"):
+        super().__init__(QDInstrumentBase.QDInstrumentType.PPMS, address, port, name)
+class QuantumDesignVersaLab(QuantumDesign):
+    def __init__(self, address: str, port: int = 11000, name: str  = "Quantum Design VersaLab"):
+        super().__init__(QDInstrumentBase.QDInstrumentType.VersaLab, address, port, name)
 class QuantumDesignDynaCool(QuantumDesign):
     def __init__(self, address: str, port: int = 11000, name: str  = "Quantum Design DynaCool"):
         super().__init__(QDInstrumentBase.QDInstrumentType.DynaCool, address, port, name)
+class QuantumDesignSVSM(QuantumDesign):
+    def __init__(self, address: str, port: int = 11000, name: str  = "Quantum Design SVSM"):
+        super().__init__(QDInstrumentBase.QDInstrumentType.SVSM, address, port, name)

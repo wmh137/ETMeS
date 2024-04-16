@@ -13,7 +13,8 @@ Basic usage of python is enough !
 ## Requirement
 
 - Windows >= 10 (Powershell on Windows 7 does not support ANSI escape codes)
-- python >= 3.8
+- python >= 3.8, pyvisa, pythonnet
+- .NET
 
 ## Basic usage
 
@@ -34,13 +35,13 @@ You need to write code as follow steps:
 Following principles should be followed:
 
 - some instruments cannot reach the targets immediately, wait for them is necessary
-`exp.wait([ins1 ins2 ...])`
+`exp.wait(time, [ins1 ins2 ...], [waitFlag1, waitFlag2, ...])`
 - refresh the status manually unless you are waiting
 `exp.refresh()`
 - record the status manually as well
 `exp.record()`
 - if the class of your instrument is not applied, please write it by yourself: inherit `class ins`, override necessary functions and define specific functions of your instrument
-`class my_ins(ins)`
+`class myins(ins)`
 
 ## Future plan
 
@@ -48,6 +49,10 @@ Following principles should be followed:
 - compatible with modbus
 - compatible with Windows 7
 - test on Linux
+
+## Acknowledge
+
+We are inspired by [labdrivers](https://github.com/masonlab/labdrivers), and grateful to the contributors.
 
 ## Final
 
