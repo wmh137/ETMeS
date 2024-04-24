@@ -1,4 +1,5 @@
 from .ins import ins, waitFlag
+from typing import List
 import clr
 
 clr.AddReference('etmes/instruments/QDInstrument')
@@ -10,6 +11,7 @@ class QuantumDesign(ins):
         super().__init__(address, name, False)
         self.flag = [None, None, None] # temperature rate, field rate, position rate
         self.setpoint = [None, None, None] # temperature&approach, field&approach, position
+        self.targetpoint = [None, None, None] # temperature, field, position
         self.now = [None, None, None, None] #  temperature&status, field&status, position&status, chamber
         self.nowName = ["T(K)", "H(Oe)", "Pos(deg)"]
         self.type = type
@@ -34,6 +36,11 @@ class QuantumDesign(ins):
         self.flag[2] = rate
     def setChamber(self, command: QDInstrumentBase.ChamberCommand):
         self.res.SetChamber(command)
+    def setTarget(self, flag: bool, target: List[float]):
+        if flag:
+            self.targetpoint[0] = [target[0], None]
+        else:
+            self.targetpoint[0] = None
     def name2str(self) -> str:
         return f"{self.name:>40s}"
     def getNow(self):
@@ -92,9 +99,9 @@ class QuantumDesign(ins):
         return s
     def now2record(self) -> str:
         return f"{self.now[0][1]:>.5f},{self.now[1][1]:>.3f},{self.now[2][1]:>.3f}"
-    def reach(self, flag: list) -> bool:
+    def reach(self, flag: List[waitFlag]) -> bool:
         '''reach([Tflag, Fflag, Pflag, Cflag])'''
-        reached = len(flag)*[False]
+        reached = 4*[False]
         for i in range(4):
             if flag[i] == waitFlag.none:
                 reached[i] = True
@@ -102,8 +109,13 @@ class QuantumDesign(ins):
                 reached[i] = int(self.now[i][2]) in self.waitStable[i]
             else:
                 if self.setpoint[i] != None:
+                    target = None
+                    if i < 3 and self.targetpoint[i] != None:
+                        target = self.targetpoint[i]
+                    else:
+                        target = self.setpoint[i]
                     if i < 3:
-                        reached[i] = bool(flag[i] * (self.setpoint[i][0] - self.now[i][1]) < self.error[i])
+                        reached[i] = bool(flag[i] * (target[0] - self.now[i][1]) < self.error[i])
                     else:
                         reached[i] = True
                 else:

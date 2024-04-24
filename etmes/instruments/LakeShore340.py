@@ -7,6 +7,7 @@ class LakeShore340(ins):
         super().__init__(address, name)
         self.flag = [False] # output on/off
         self.setpoint = [None, None] # target temperature, rate
+        self.targetpoint = [None] # temperature
         self.now = [None, None] # temperarure, power
         self.nowName = ["T(K)", "power(%)"]
         self.error = [0.1]
@@ -31,6 +32,11 @@ class LakeShore340(ins):
         time.sleep(0.5)
         self.setpoint[0] = setpoint
         self.flag[0] = True
+    def setTarget(self, flag: bool, target: float = None):
+        if flag:
+            self.targetpoint[0] = target
+        else:
+            self.targetpoint[0] = None
     def stop(self):
         self.res.write(f"RANGE 0\n")
     def getNow(self):
@@ -51,10 +57,14 @@ class LakeShore340(ins):
         else:
             return super().now2record()
     def reach(self, flag: waitFlag) -> bool:
-        if (self.now[0] != None) and (self.setpoint[0] != None):
+        if self.targetpoint[0] == None:
+            targetTemp = self.setpoint[0]
+        else:
+            targetTemp = self.targetpoint[0]
+        if (self.now[0] != None) and (targetTemp != None):
             if flag == waitFlag.stable:
-                return abs(self.now[0] - self.setpoint[0]) < self.error[0]
+                return abs(self.now[0] - targetTemp) < self.error[0]
             else:
-                return flag * (self.setpoint[0] - self.now[0]) < self.error[0]
+                return flag * (targetTemp - self.now[0]) < self.error[0]
         else:
             return True

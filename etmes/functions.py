@@ -1,12 +1,14 @@
 import pyvisa as visa
 from .instruments.ins import ins, waitFlag
 import time, threading, sys
+from typing import List
 
 class em():
     def __init__(self):
         self.__rm = visa.ResourceManager()
         self.__instruments = []
         self.__t0 = time.time()
+        self.__t = time.time()
         self.__start = False
         self.__interval = 0.3
         self.__f = None
@@ -18,8 +20,6 @@ class em():
             ins.open()
         self.__instruments.append(ins)
         ins.insInit()
-    def t(self):
-        return time.time()-self.__t0
     def start(self):
         nameStr = 10*" "+"|"
         fHeader = "time"
@@ -30,6 +30,7 @@ class em():
         print(f"{nameStr}\n\n\n\n", end='')
         self.__f = open("data"+time.strftime("%Y%m%d_%H%M%S", time.localtime())+".dat", "w")
         self.__f.write(fHeader+"\n")
+        self.__f.flush()
         self.__start = True
     def stop(self):
         for ins in self.__instruments:
@@ -52,6 +53,7 @@ class em():
             th.start()
         for th in threads:
             th.join()
+        self.__t = time.time()
     def refresh(self):
         if not self.__start:
             print("ETMeS is not running!", end="")
@@ -65,16 +67,17 @@ class em():
         self.refreshNow()
         for ins in self.__instruments:
             nowStr += ins.now2str()+"|"
-        sys.stdout.write("\x1b[3A")
-        print(f"{flagStr}\n{setpointStr}\n{nowStr}{self.t():>19.2f}s")
-        self.__log.write(f"{nowStr}{self.t():>19.2f}s\n")
+        sys.stdout.write("\x1b[3A") # Powershell on Windows 7 does not support ANSI escape codes
+        printStr = f"{flagStr}\n{setpointStr}\n{nowStr}{self.__t-self.__t0:>19.2f}s"
+        print(printStr)
+        self.__log.write(printStr)
     def record(self):
-        self.__f.write(f"{self.t():.3f}")
+        self.__f.write(f"{self.__t:.3f}")
         for ins in self.__instruments:
             self.__f.write(f",{ins.now2record()}")
         self.__f.write("\n")
         self.__f.flush()
-    def wait(self, t: float, inss: list, flags: list):
+    def wait(self, t: float, inss: List[ins], flags: list):
         '''wait(time, [ins1, ins2, ...], [waitFlag1, waitFlag2, ...])'''
         reached = len(inss)*[False]
         t0 = time.time()

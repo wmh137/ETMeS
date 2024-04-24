@@ -21,6 +21,7 @@ class ins():
         self.res = None # resource
         self.flag = [] # override
         self.setpoint = [] # override
+        self.target = [] # override
         self.now = [] # override
         self.nowName = [] # override [str]
         self.ONOFF = ["OFF", "ON"]

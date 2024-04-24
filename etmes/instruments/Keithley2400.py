@@ -13,7 +13,7 @@ class Keithley2400(ins):
     def insInit(self):
         self.res.write_termination = ''
         self.res.read_termination = '\n'
-        self.res.write("*RST\n:SENS:FUNC:CONC ON\n:FORM:ELEM VOLT,CURR\n")
+        self.res.write(":SENS:FUNC:CONC ON\n:FORM:ELEM VOLT,CURR\n")
     def setRSEN(self, flag: bool):
         self.res.write(f":SYST:RSEN {flag:d}\n")
         self.flag[1] = flag
