@@ -68,8 +68,8 @@ class em():
         for ins in self.__instruments:
             nowStr += ins.now2str()+"|"
         sys.stdout.write("\x1b[3A") # Powershell on Windows 7 does not support ANSI escape codes
-        printStr = f"{flagStr}\n{setpointStr}\n{nowStr}{self.__t-self.__t0:>19.2f}s"
-        print(printStr)
+        printStr = f"{flagStr}\n{setpointStr}\n{nowStr}{self.__t-self.__t0:>19.2f}s\n"
+        print(printStr, end="")
         self.__log.write(printStr)
     def record(self):
         self.__f.write(f"{self.__t:.3f}")
