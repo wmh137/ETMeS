@@ -1,9 +1,10 @@
 import pyvisa as visa
 from .instruments.ins import ins, waitFlag
+from .meas import meas
 import time, threading, sys
 from typing import List
 
-class em():
+class etmes():
     def __init__(self):
         self.__rm = visa.ResourceManager()
         self.__instruments = []
@@ -13,6 +14,9 @@ class em():
         self.__interval = 0.3
         self.__f = None
         self.__log = open(".log", "w")
+        self.__flag = ""
+        self.__setpoint = ""
+        self.meas = meas(self)
     def addInstrument(self, ins: ins):
         if ins.visa:
             ins.res = self.__rm.open_resource(ins.address)
@@ -44,6 +48,8 @@ class em():
         self.__start = False
     def setInterval(self, t: float):
         self.__interval = t
+    def setFlag(self, flag: str):
+        self.__flag = flag
     def refreshNow(self):
         threads = []
         for ins in self.__instruments:
@@ -64,11 +70,13 @@ class em():
         for ins in self.__instruments:
             flagStr += ins.flag2str()+"|"
             setpointStr += ins.setpoint2str()+"|"
+        flagStr += f" {self.__flag:<20s}"
+        setpointStr += f" {self.__setpoint:<20s}"
         self.refreshNow()
         for ins in self.__instruments:
             nowStr += ins.now2str()+"|"
         sys.stdout.write("\x1b[3A") # Powershell on Windows 7 does not support ANSI escape codes
-        printStr = f"{flagStr}\n{setpointStr}\n{nowStr}{self.__t-self.__t0:>19.2f}s\n"
+        printStr = f"{flagStr}\n{setpointStr}\n{nowStr} {f'{self.__t-self.__t0:>.2f}s':<20s}\n"
         print(printStr, end="")
         self.__log.write(printStr)
     def record(self):
@@ -79,6 +87,7 @@ class em():
         self.__f.flush()
     def wait(self, t: float, inss: List[ins], flags: list):
         '''wait(time, [ins1, ins2, ...], [waitFlag1, waitFlag2, ...])'''
+        self.__flag = "WAITING "+' '.join([ins.name for ins in inss])
         reached = len(inss)*[False]
         t0 = time.time()
         t1 = 0
@@ -93,8 +102,16 @@ class em():
                     reached[i] = reached[i] or inss[i].reach(flags[i])
             if all(reached):
                 t1 = time.time()
+                self.__flag = f"WAIT {t-t1+t0:.0f}s"
             else:
                 t0 = time.time()
+                self.__flag = "WAITING "+' '.join([ins.name for ins in inss])
             if t1 - t0 > t:
                 break
+            time.sleep(self.__interval)
+        self.__flag = ""
+    def standby(self):
+        self.__flag = "STANDBY"
+        while True:
+            self.refresh()
             time.sleep(self.__interval)

@@ -26,7 +26,7 @@ class QuantumDesign(ins):
         self.res.SetTemperature(setpoint, rate, approach)
         self.setpoint[0] = [setpoint, approach]
         self.flag[0] = rate
-    def setField(self, setpoint: float, rate: float, approach: QDInstrumentBase.FieldApproach = QDInstrumentBase.FieldApproach.Linear):# in build
+    def setField(self, setpoint: float, rate: float = 100, approach: QDInstrumentBase.FieldApproach = QDInstrumentBase.FieldApproach.Linear):# in build
         self.res.SetField(setpoint, rate, approach, QDInstrumentBase.FieldMode.Persistent)
         self.setpoint[1] = [setpoint, approach]
         self.flag[1] = rate

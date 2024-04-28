@@ -1,8 +1,8 @@
-from .functions import *
-from .instruments.ins import *
-from .instruments.Keithley2400 import *
-from .instruments.InstecMK2000B import *
-from .instruments.LakeShore340 import *
-from .instruments.Keithley2182A import *
-from .instruments.EastChangingP7050 import *
-from .instruments.QuantumDesign import *
+from .instruments.ins import SM, waitFlag, ins
+from .functions import etmes
+from .instruments.Keithley2400 import Keithley2400
+from .instruments.InstecMK2000B import CH, InstecMK2000B
+from .instruments.LakeShore340 import LakeShore340
+from .instruments.Keithley2182A import Keithley2182A
+from .instruments.EastChangingP7050 import EastChangingP7050
+from .instruments.QuantumDesign import QuantumDesignDynaCool, QuantumDesignPPMS, QuantumDesignSVSM, QuantumDesignVersaLab
