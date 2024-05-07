@@ -21,7 +21,7 @@ Basic usage of python is enough !
 You need to write code as follow steps:
 
 1. instantiate a experiment
-`exp = etmes.em()`
+`exp = etmes.etmes()`
 1. instantiate all the classes of your instruments
 `k = etmes.Keithley2400("GPIB:xxxx")`
 1. add them to the experiment
@@ -43,6 +43,8 @@ Following principles should be followed:
 - if the class of your instrument is not applied, please write it by yourself: inherit `class ins`, override necessary functions and define specific functions of your instrument
 `class myins(ins)`
 
+Some measurements are applied in `etmes.meas`. Instantiate a measurement `m = etmes.meas(exp)` and call its functions.
+
 ## Future plan
 
 - add more classes of different instruments
@@ -52,7 +54,7 @@ Following principles should be followed:
 
 ## Acknowledge
 
-We are inspired by [labdrivers](https://github.com/masonlab/labdrivers), and grateful to the contributors.
+We are inspired by [labdrivers](https://github.com/masonlab/labdrivers), and grateful to its contributors.
 
 ## Final
 

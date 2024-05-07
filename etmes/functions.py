@@ -1,8 +1,7 @@
-import pyvisa as visa
-from .instruments.ins import ins, waitFlag
-from .meas import meas
 import time, threading, sys
 from typing import List
+import pyvisa as visa
+from .instruments.ins import ins, waitFlag
 
 class etmes():
     def __init__(self):
@@ -13,10 +12,9 @@ class etmes():
         self.__start = False
         self.__interval = 0.3
         self.__f = None
-        self.__log = open(".log", "w")
+        self.__log = open(".log", "a")
         self.__flag = ""
         self.__setpoint = ""
-        self.meas = meas(self)
     def addInstrument(self, ins: ins):
         if ins.visa:
             ins.res = self.__rm.open_resource(ins.address)
@@ -35,6 +33,7 @@ class etmes():
         self.__f = open("data"+time.strftime("%Y%m%d_%H%M%S", time.localtime())+".dat", "w")
         self.__f.write(fHeader+"\n")
         self.__f.flush()
+        self.__log.write(f"{self.__t:f} {self.__f.name:s}\n")
         self.__start = True
     def stop(self):
         for ins in self.__instruments:
@@ -78,7 +77,9 @@ class etmes():
         sys.stdout.write("\x1b[3A") # Powershell on Windows 7 does not support ANSI escape codes
         printStr = f"{flagStr}\n{setpointStr}\n{nowStr} {f'{self.__t-self.__t0:>.2f}s':<20s}\n"
         print(printStr, end="")
-        self.__log.write(printStr)
+        for ins in self.__instruments:
+            if ins.lognow:
+                self.__log.write(f"{self.__t:f} {ins.address:s} {ins.name:s} {ins.log:s}\n")
     def record(self):
         self.__f.write(f"{self.__t:.3f}")
         for ins in self.__instruments:
@@ -112,6 +113,8 @@ class etmes():
         self.__flag = ""
     def standby(self):
         self.__flag = "STANDBY"
+        self.__log.write(f"{self.__t:f} STANDBY\n")
+        self.__log.flush()
         while True:
             self.refresh()
             time.sleep(self.__interval)

@@ -25,6 +25,8 @@ class ins():
         self.now = [] # override
         self.nowName = [] # override [str]
         self.ONOFF = ["OFF", "ON"]
+        self.lognow = False
+        self.log = ""
     def write(self, cmd: str):
         if self.visa:
             self.res.write(cmd)
