@@ -1,28 +1,52 @@
-import time, threading, sys
+import time, threading, sys, os
 from typing import List
 import pyvisa as visa
 from .instruments.ins import ins, waitFlag
 
+def checkFile(name: str):
+    if os.path.exists(name):
+        base_name, extension = os.path.splitext(name)
+        index = 1
+        while True:
+            newname = f"{base_name}.{index}{extension}"
+            if not os.path.exists(newname):
+                return newname
+            index += 1
+    else:
+        return name
+
 class etmes():
-    def __init__(self):
+    def __init__(self, instruments: List[ins], dataFile: str = ""):
         self.__rm = visa.ResourceManager()
         self.__instruments = []
+        for ins in instruments:
+            self.__addIns(ins)
         self.__t0 = time.time()
         self.__t = time.time()
-        self.__start = False
         self.__interval = 0.3
-        self.__f = None
         self.__log = open(".log", "a")
+        if dataFile == None:
+            self.__f = None
+        else:
+            if dataFile == "":
+                dataFile = "data"+time.strftime("%Y%m%d_%H%M%S", time.localtime())+".dat"
+            else:
+                dataFile = checkFile(dataFile+".dat")
+            self.__f = open(dataFile, "w")
         self.__flag = ""
         self.__setpoint = ""
-    def addInstrument(self, ins: ins):
+        self.__start()
+    def __addIns(self, ins: ins):
         if ins.visa:
             ins.res = self.__rm.open_resource(ins.address)
         else:
             ins.open()
         self.__instruments.append(ins)
         ins.insInit()
-    def start(self):
+    def __logWrite(self, log: str):
+        self.__log.write(log)
+        self.__log.flush()
+    def __start(self):
         nameStr = 10*" "+"|"
         fHeader = "time"
         for ins in self.__instruments:
@@ -30,11 +54,13 @@ class etmes():
             for var in ins.nowName:
                 fHeader += f", {ins.name}_{var}"
         print(f"{nameStr}\n\n\n\n", end='')
-        self.__f = open("data"+time.strftime("%Y%m%d_%H%M%S", time.localtime())+".dat", "w")
-        self.__f.write(fHeader+"\n")
-        self.__f.flush()
-        self.__log.write(f"{self.__t:f} {self.__f.name:s}\n")
-        self.__start = True
+        self.__logWrite(f"{self.__t:f}")
+        if self.__f != None:
+            self.__f.write(fHeader+"\n")
+            self.__f.flush()
+            self.__logWrite(f" {self.__f.name:s}\n")
+        else:
+            self.__logWrite("\n")
     def stop(self):
         for ins in self.__instruments:
             ins.stop()
@@ -44,7 +70,6 @@ class etmes():
                 ins.close()
         self.__rm.close()
         self.__f.close()
-        self.__start = False
     def setInterval(self, t: float):
         self.__interval = t
     def setFlag(self, flag: str):
@@ -60,9 +85,6 @@ class etmes():
             th.join()
         self.__t = time.time()
     def refresh(self):
-        if not self.__start:
-            print("ETMeS is not running!", end="")
-            exit()
         flagStr = 6*" "+"FLAG|"
         setpointStr = 2*" "+"SETPOINT|"
         nowStr = 7*" "+"NOW|"
@@ -74,13 +96,16 @@ class etmes():
         self.refreshNow()
         for ins in self.__instruments:
             nowStr += ins.now2str()+"|"
+            if ins.log[0]:
+                self.__logWrite(f"{self.__t:f} {ins.address:s} {ins.name:s} {ins.log[1]:s}\n")
+                ins.log[0] = False
         sys.stdout.write("\x1b[3A") # Powershell on Windows 7 does not support ANSI escape codes
         printStr = f"{flagStr}\n{setpointStr}\n{nowStr} {f'{self.__t-self.__t0:>.2f}s':<20s}\n"
         print(printStr, end="")
-        for ins in self.__instruments:
-            if ins.lognow:
-                self.__log.write(f"{self.__t:f} {ins.address:s} {ins.name:s} {ins.log:s}\n")
     def record(self):
+        if self.__f == None:
+            self.__flag = "WARNING: record failed"
+            return
         self.__f.write(f"{self.__t:.3f}")
         for ins in self.__instruments:
             self.__f.write(f",{ins.now2record()}")
@@ -113,8 +138,7 @@ class etmes():
         self.__flag = ""
     def standby(self):
         self.__flag = "STANDBY"
-        self.__log.write(f"{self.__t:f} STANDBY\n")
-        self.__log.flush()
+        self.__logWrite(f"{self.__t:f} STANDBY\n")
         while True:
             self.refresh()
             time.sleep(self.__interval)
