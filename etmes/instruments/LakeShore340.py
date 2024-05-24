@@ -10,7 +10,7 @@ class LakeShore340(ins):
         self.targetpoint = [None] # temperature
         self.now = [None, None] # temperarure, power
         self.nowName = ["T(K)", "power(%)"]
-        self.error = [0.1]
+        self.error = [0.05]
     def insInit(self):
         self.res.baud_rate = 9600
         self.res.parity = visa.constants.Parity(1)

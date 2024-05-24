@@ -11,6 +11,18 @@ class waitFlag(IntEnum):
     negative = -1
 
 class ins():
+    '''
+    The superclass of all instruments classes.
+
+    Attributes
+    ----------
+        address : str
+            address of the instrument
+        name : str
+            name of the instrument
+        visa : bool
+            the instrument supports visa or not (maybe modified in future)
+    '''
     def __init__(self, address: str, name: str = None, visa: bool = True):
         self.address = address
         self.visa = visa

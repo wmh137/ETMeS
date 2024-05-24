@@ -1,5 +1,5 @@
 import time, threading, sys, os
-from typing import List
+from typing import List, Union
 import pyvisa as visa
 from .instruments.ins import ins, waitFlag
 
@@ -15,10 +15,18 @@ def checkFile(name: str):
     else:
         return name
 
-class etmes():
-    def __init__(self, instruments: List[ins], dataFile: str = ""):
+class exp():
+    '''
+    Attributes
+    ----------
+        instruments : List[ins]
+            list of instruments
+        dataFile : str
+            name of data file without extensition name
+    '''
+    def __init__(self, instruments: List[ins], dataFile: Union[str, None]=""):
         self.__rm = visa.ResourceManager()
-        self.__instruments = []
+        self.instruments = []
         for ins in instruments:
             self.__addIns(ins)
         self.__t0 = time.time()
@@ -41,7 +49,7 @@ class etmes():
             ins.res = self.__rm.open_resource(ins.address)
         else:
             ins.open()
-        self.__instruments.append(ins)
+        self.instruments.append(ins)
         ins.insInit()
     def __logWrite(self, log: str):
         self.__log.write(log)
@@ -49,7 +57,7 @@ class etmes():
     def __start(self):
         nameStr = 10*" "+"|"
         fHeader = "time"
-        for ins in self.__instruments:
+        for ins in self.instruments:
             nameStr += ins.name2str()+"|"
             for var in ins.nowName:
                 fHeader += f", {ins.name}_{var}"
@@ -62,7 +70,8 @@ class etmes():
         else:
             self.__logWrite("\n")
     def stop(self):
-        for ins in self.__instruments:
+        '''stop all instruments'''
+        for ins in self.instruments:
             ins.stop()
             if ins.visa:
                 ins.res.close()
@@ -74,9 +83,9 @@ class etmes():
         self.__interval = t
     def setFlag(self, flag: str):
         self.__flag = flag
-    def refreshNow(self):
+    def __refreshNow(self):
         threads = []
-        for ins in self.__instruments:
+        for ins in self.instruments:
             th = threading.Thread(target=ins.getNow)
             th.setDaemon(True)
             threads.append(th)
@@ -85,34 +94,36 @@ class etmes():
             th.join()
         self.__t = time.time()
     def refresh(self):
+        '''refresh the current states of the instruments'''
         flagStr = 6*" "+"FLAG|"
         setpointStr = 2*" "+"SETPOINT|"
         nowStr = 7*" "+"NOW|"
-        for ins in self.__instruments:
+        for ins in self.instruments:
             flagStr += ins.flag2str()+"|"
             setpointStr += ins.setpoint2str()+"|"
         flagStr += f" {self.__flag:<20s}"
         setpointStr += f" {self.__setpoint:<20s}"
-        self.refreshNow()
-        for ins in self.__instruments:
+        self.__refreshNow()
+        for ins in self.instruments:
             nowStr += ins.now2str()+"|"
             if ins.log[0]:
-                self.__logWrite(f"{self.__t:f} {ins.address:s} {ins.name:s} {ins.log[1]:s}\n")
+                self.__logWrite(f"{self.__t:f} {ins.address:s} {ins.name:s}: {ins.log[1]:s}\n")
                 ins.log[0] = False
         sys.stdout.write("\x1b[3A") # Powershell on Windows 7 does not support ANSI escape codes
         printStr = f"{flagStr}\n{setpointStr}\n{nowStr} {f'{self.__t-self.__t0:>.2f}s':<20s}\n"
         print(printStr, end="")
     def record(self):
+        '''record the current states of the instruments'''
         if self.__f == None:
             self.__flag = "WARNING: record failed"
             return
         self.__f.write(f"{self.__t:.3f}")
-        for ins in self.__instruments:
+        for ins in self.instruments:
             self.__f.write(f",{ins.now2record()}")
         self.__f.write("\n")
         self.__f.flush()
-    def wait(self, t: float, inss: List[ins], flags: list):
-        '''wait(time, [ins1, ins2, ...], [waitFlag1, waitFlag2, ...])'''
+    def wait(self, t: float, inss: List[ins], flags: List[waitFlag]):
+        '''wait t (seconds) after all instruments reach their setpoints/targets'''
         self.__flag = "WAITING "+' '.join([ins.name for ins in inss])
         reached = len(inss)*[False]
         t0 = time.time()
@@ -131,12 +142,13 @@ class etmes():
                 self.__flag = f"WAIT {t-t1+t0:.0f}s"
             else:
                 t0 = time.time()
-                self.__flag = "WAITING "+' '.join([ins.name for ins in inss])
+                self.__flag = "WAIT FOR "+' '.join([ins.name for ins in inss])
             if t1 - t0 > t:
                 break
             time.sleep(self.__interval)
         self.__flag = ""
     def standby(self):
+        '''maintain the current states of the instruments'''
         self.__flag = "STANDBY"
         self.__logWrite(f"{self.__t:f} STANDBY\n")
         while True:

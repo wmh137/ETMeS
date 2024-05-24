@@ -20,17 +20,13 @@ Basic usage of python is enough !
 
 You need to write code as follow steps:
 
-1. instantiate a experiment
-`exp = etmes.etmes()`
 1. instantiate all the classes of your instruments
 `k = etmes.Keithley2400("GPIB:xxxx")`
-1. add them to the experiment
-`exp.addInstrument(k)`
-1. experiment start
-`exp.start()`
+1. instantiate a experiment with your instruments and path of data file
+`exp = etmes.etmes([k], "data")`
 1. control instruments as you want
-1. experiment stop (optional)
-`exp.stop()`
+1. experiment standby (recommend) or stop
+`exp.standby()`/`exp.stop()`
 
 Following principles should be followed:
 
@@ -55,6 +51,12 @@ Some measurements are applied in `etmes.meas`. Instantiate a measurement `m = et
 ## Acknowledge
 
 We are inspired by [labdrivers](https://github.com/masonlab/labdrivers), and grateful to its contributors.
+
+## Contributors
+
+[Minghao Wang](wmh137@mail.ustc.edu.cn) (Founder)
+
+[Ming Huang](hm2018@mail.ustc.edu.cn)
 
 ## Final
 

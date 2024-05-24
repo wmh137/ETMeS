@@ -1,18 +1,56 @@
 from typing import List
-from etmes import etmes, ins, waitFlag
+import time
+from etmes import exp, ins, waitFlag
 
 class meas():
-    def __init__(self, exp: etmes):
+    '''
+    Some packaged measurement functions.
+
+    Attributes
+    ----------
+        exp : etmes.exp
+    '''
+    def __init__(self, exp: exp):
         self.__exp = exp
-    def SMUsrc(self, src: List[float], SMU: ins):
+    def SMUsrc(self, src: List[float], SMU: ins, delay: float = 0):
+        '''
+        SMU source in order.
+
+        Attributes
+        ----------
+        src : List[float]
+            list of source
+        SMU : ins
+            instrument of SMU, SMU.setSrc(src: float) is required
+        delay : float
+            source ---delay(second)---> refresh&record
+        '''
         self.__exp.setFlag("MEAS")
         for i in src:
             SMU.setSrc(i)
+            time.sleep(delay)
             self.__exp.refresh()
             self.__exp.record()
         SMU.setSrc(0)
         self.__exp.setFlag("")
-    def scanTemp(self, Tstart: float, Tstop: float, Tstep: float, Trate: float, src: List[float], SMU: ins, Temp: ins):
+    def scanTemp(self, Tstart: float, Tstop: float, Tstep: float, Trate: float, Temp: ins, func: function):
+        '''
+        Attributes
+        ----------
+        Tstart : float
+            first temperature
+        Tstop : float
+            last temperature
+        Tstep : float
+            step of temperature
+        Trate : float
+            rate of warming/cooling
+        Temp : ins
+            instrument of temperature controller.
+            Temp.setTemp(setpoint: float, rate: float) and Temp.setTarget(flag: bool, target: float=None) are required.
+        func : function
+            actions at each target
+        '''
         if Tstop>Tstart:
             wf = waitFlag.positive
         else:
@@ -31,12 +69,27 @@ class meas():
         for i in range(n):
             Temp.setTarget(True, Tstart+i*Tstep)
             self.__exp.wait(0, [Temp], [wf])
-            self.SMUsrc(src, SMU)
+            func()
         Temp.setTarget(False)
         Temp.setTemp(Tstop, Trate)
         self.__exp.wait(0, [Temp], [wf])
-        self.SMUsrc(src, SMU)
-    def scanField(self, Fstart: float, Fstop: float, Fstep: float, src: List[float], SMU: ins, Field: ins):
+        func()
+    def scanField(self, Fstart: float, Fstop: float, Fstep: float, Mag: ins, func: function):
+        '''
+        Attributes
+        ----------
+        Fstart : float
+            first field
+        Fstop : float
+            last field
+        Fstep : float
+            step of field
+        Field : ins
+            Instrument of magnet controller
+            Mag.setField(field: float) is required.
+        func : function
+            actions at each target
+        '''
         n = (Fstop-Fstart)/Fstep
         if n < 0:
             Fstep = -Fstep
@@ -45,12 +98,12 @@ class meas():
             n = round(n)
         else:
             n = int(n)+1
-        Field.setField(Fstart)
-        self.__exp.wait(10, [Field], [waitFlag.stable])
+        Mag.setField(Fstart)
+        self.__exp.wait(10, [Mag], [waitFlag.stable])
         for i in range(n):
-            Field.setField(Fstart+i*Fstep)
-            self.__exp.wait(5, [Field], [waitFlag.stable])
-            self.SMUsrc(src, SMU)
-        Field.setField(Fstop)
-        self.__exp.wait(5, [Field], [waitFlag.stable])
-        self.SMUsrc(src, SMU)
+            Mag.setField(Fstart+i*Fstep)
+            self.__exp.wait(5, [Mag], [waitFlag.stable])
+            func()
+        Mag.setField(Fstop)
+        self.__exp.wait(5, [Mag], [waitFlag.stable])
+        func()

@@ -1,5 +1,6 @@
+__author__ = "MH Wang"
 from .instruments.ins import SM, waitFlag, ins
-from .functions import etmes
+from .functions import exp
 from .meas import meas
 from .instruments.Keithley2400 import Keithley2400
 from .instruments.InstecMK2000B import CH, InstecMK2000B
