@@ -1,10 +1,10 @@
-from typing import List
+from typing import List, Callable
 import time
 from etmes import exp, ins, waitFlag
 
 class meas():
     '''
-    Some packaged measurement functions.
+    Some measurement functions.
 
     Attributes
     ----------
@@ -23,7 +23,7 @@ class meas():
         SMU : ins
             instrument of SMU, SMU.setSrc(src: float) is required
         delay : float
-            source ---delay(second)---> refresh&record
+            source ---wait delay seconds---> refresh&record
         '''
         self.__exp.setFlag("MEAS")
         for i in src:
@@ -33,7 +33,7 @@ class meas():
             self.__exp.record()
         SMU.setSrc(0)
         self.__exp.setFlag("")
-    def scanTemp(self, Tstart: float, Tstop: float, Tstep: float, Trate: float, Temp: ins, func: function):
+    def scanTemp(self, Tstart: float, Tstop: float, Tstep: float, Trate: float, Temp: ins, func: Callable):
         '''
         Attributes
         ----------
@@ -49,7 +49,7 @@ class meas():
             instrument of temperature controller.
             Temp.setTemp(setpoint: float, rate: float) and Temp.setTarget(flag: bool, target: float=None) are required.
         func : function
-            actions at each target
+            a function contains actions at each target with no attribute
         '''
         if Tstop>Tstart:
             wf = waitFlag.positive
@@ -74,7 +74,7 @@ class meas():
         Temp.setTemp(Tstop, Trate)
         self.__exp.wait(0, [Temp], [wf])
         func()
-    def scanField(self, Fstart: float, Fstop: float, Fstep: float, Mag: ins, func: function):
+    def scanField(self, Fstart: float, Fstop: float, Fstep: float, Mag: ins, func: Callable):
         '''
         Attributes
         ----------
@@ -88,7 +88,7 @@ class meas():
             Instrument of magnet controller
             Mag.setField(field: float) is required.
         func : function
-            actions at each target
+            a function contains actions at each target with no attribute
         '''
         n = (Fstop-Fstart)/Fstep
         if n < 0:

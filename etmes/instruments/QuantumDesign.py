@@ -10,7 +10,7 @@ class QuantumDesign(ins):
     def __init__(self, type: QDInstrumentBase.QDInstrumentType, address: str, port: int, name: str):
         super().__init__(address, name, False)
         self.flag = [None, None, None] # temperature rate, field rate, position rate
-        self.setpoint = [None, None, None] # temperature&approach, field&approach, position
+        self.setpoint = [None, None, None, None] # temperature&approach, field&approach, position
         self.targetpoint = [None, None, None] # temperature, field, position
         self.now = [None, None, None, None] #  temperature&status, field&status, position&status, chamber
         self.nowName = ["T(K)", "H(Oe)", "Pos(deg)"]
@@ -36,6 +36,7 @@ class QuantumDesign(ins):
         self.flag[2] = rate
     def setChamber(self, command: QDInstrumentBase.ChamberCommand):
         self.res.SetChamber(command)
+        self.setpoint[3] = command
     def setTarget(self, flag: bool, target: List[float]):
         if flag:
             self.targetpoint[0] = [target[0], None]

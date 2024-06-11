@@ -34,13 +34,13 @@ class exp():
         self.__interval = 0.3
         self.__log = open(".log", "a")
         if dataFile == None:
-            self.__f = None
+            self.f = None
         else:
             if dataFile == "":
                 dataFile = "data"+time.strftime("%Y%m%d_%H%M%S", time.localtime())+".dat"
             else:
                 dataFile = checkFile(dataFile+".dat")
-            self.__f = open(dataFile, "w")
+            self.f = open(dataFile, "w")
         self.__flag = ""
         self.__setpoint = ""
         self.__start()
@@ -63,10 +63,10 @@ class exp():
                 fHeader += f", {ins.name}_{var}"
         print(f"{nameStr}\n\n\n\n", end='')
         self.__logWrite(f"{self.__t:f}")
-        if self.__f != None:
-            self.__f.write(fHeader+"\n")
-            self.__f.flush()
-            self.__logWrite(f" {self.__f.name:s}\n")
+        if self.f != None:
+            self.f.write(fHeader+"\n")
+            self.f.flush()
+            self.__logWrite(f" {self.f.name}\n")
         else:
             self.__logWrite("\n")
     def stop(self):
@@ -78,7 +78,7 @@ class exp():
             else:
                 ins.close()
         self.__rm.close()
-        self.__f.close()
+        self.f.close()
     def setInterval(self, t: float):
         self.__interval = t
     def setFlag(self, flag: str):
@@ -114,17 +114,17 @@ class exp():
         print(printStr, end="")
     def record(self):
         '''record the current states of the instruments'''
-        if self.__f == None:
+        if self.f == None:
             self.__flag = "WARNING: record failed"
             return
-        self.__f.write(f"{self.__t:.3f}")
+        self.f.write(f"{self.__t:.3f}")
         for ins in self.instruments:
-            self.__f.write(f",{ins.now2record()}")
-        self.__f.write("\n")
-        self.__f.flush()
+            self.f.write(f",{ins.now2record()}")
+        self.f.write("\n")
+        self.f.flush()
     def wait(self, t: float, inss: List[ins], flags: List[waitFlag]):
         '''wait t (seconds) after all instruments reach their setpoints/targets'''
-        self.__flag = "WAITING "+' '.join([ins.name for ins in inss])
+        self.__flag = "WAIT FOR "+' '.join([ins.name for ins in inss])
         reached = len(inss)*[False]
         t0 = time.time()
         t1 = 0
