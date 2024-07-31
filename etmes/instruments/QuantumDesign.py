@@ -2,7 +2,7 @@ from .ins import ins, waitFlag
 from typing import List
 import clr
 
-clr.AddReference('etmes/instruments/QDInstrument')
+clr.AddReference("etmes/instruments/QDInstrument")
 
 from QuantumDesign.QDInstrument import QDInstrumentBase, QDInstrumentFactory
 
@@ -96,7 +96,7 @@ class QuantumDesign(ins):
         if self.now[3] is not None:
             s += f"{self.res.ChamberStatusString(self.now[3][1]):>.5s}"
         else:
-            s += 5*""
+            s += 5*" "
         return s
     def now2record(self) -> str:
         return f"{self.now[0][1]:>.5f},{self.now[1][1]:>.3f},{self.now[2][1]:>.3f}"

@@ -107,3 +107,19 @@ class meas():
         Mag.setField(Fstop)
         self.__exp.wait(5, [Mag], [waitFlag.stable])
         func()
+    def scanTime(self, t: float, interval: float, func: Callable):
+        '''
+        Attributes
+        ----------
+        time : float
+            total time
+        interval : float
+            interval of time
+        func : function
+            a function contains actions at each target with no attribute
+        '''
+        func()
+        t0 = time.time()
+        while time.time()-t0<t:
+            func()
+            self.__exp.wait(interval, [], [])

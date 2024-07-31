@@ -15,8 +15,8 @@ class LakeShore340(ins):
         self.res.baud_rate = 9600
         self.res.parity = visa.constants.Parity(1)
         self.res.data_bits = 7
-        self.res.write_termination = ''
-        self.res.read_termination = '\r\n'
+        self.res.write_termination = ""
+        self.res.read_termination = "\r\n"
         self.res.write(f"RANGE 5\n")
         time.sleep(1)
     def setRamp(self, rate: float):
@@ -48,7 +48,7 @@ class LakeShore340(ins):
         if (self.setpoint[0] != None) and (self.setpoint[1] != None):
             return f"{self.setpoint[0]:>9.2f}K{self.setpoint[1]:>7.2f}K/m"
         else:
-            return 20*' '
+            return 20*" "
     def now2str(self) -> str:
         return f"{self.now[0]:>9.2f}K{self.now[1]:>9.1f}%"
     def now2record(self) -> str:

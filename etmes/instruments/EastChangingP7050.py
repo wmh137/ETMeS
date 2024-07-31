@@ -13,8 +13,8 @@ class EastChangingP7050(ins):
     def insInit(self):
         self.res.baud_rate = 9600
         self.res.parity = visa.constants.Parity(1)
-        self.res.write_termination = ''
-        self.res.read_termination = '\n'
+        self.res.write_termination = ""
+        self.res.read_termination = "\n"
         self.res.write(":REN\n")
         time.sleep(0.1)
         if self.res.query(":MODE?\n") == "CURR":

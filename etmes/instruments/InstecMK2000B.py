@@ -17,8 +17,8 @@ class InstecMK2000B(ins):
         self.nowName = ["T(K)", "power(%)"]
         self.error = [0.1]
     def insInit(self):
-        self.res.write_termination = ''
-        self.res.read_termination = '\r\n'
+        self.res.write_termination = ""
+        self.res.read_termination = "\r\n"
     def setCH(self, flag: CH):
         self.res.write(f"TEMP:CHSW {flag:d}\n")
     def setTemp(self, setpoint: float, rate: float):
@@ -42,7 +42,7 @@ class InstecMK2000B(ins):
         if (self.setpoint[0] != None) and (self.setpoint[1] != None):
             return f"{self.setpoint[0]:>9.3f}K{self.setpoint[1]:>7.2f}K/m"
         else:
-            return 20*' '
+            return 20*" "
     def now2str(self) -> str:
         return f"{self.now[0]:>9.3f}K{self.now[1]:>+9.1f}%"
     def now2record(self) -> str:
