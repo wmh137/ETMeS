@@ -1,5 +1,5 @@
 from .ins import ins, waitFlag
-from typing import List
+from typing import List, Union
 import clr
 
 clr.AddReference("etmes/instruments/QDInstrument")
@@ -9,11 +9,12 @@ from QuantumDesign.QDInstrument import QDInstrumentBase, QDInstrumentFactory
 class QuantumDesign(ins):
     def __init__(self, type: QDInstrumentBase.QDInstrumentType, address: str, port: int, name: str):
         super().__init__(address, name, False)
-        self.flag = [None, None, None] # temperature rate, field rate, position rate
-        self.setpoint = [None, None, None, None] # temperature&approach, field&approach, position
-        self.targetpoint = [None, None, None] # temperature, field, position
-        self.now = [None, None, None, None] #  temperature&status, field&status, position&status, chamber
+        self.flag = {'temprate': None, 'fieldrate': None, 'posrate': None}
+        self.setpoint = {'temp': None, 'field': None, 'pos': None, 'chamber': None}
+        self.targetpoint = {'temp': None, 'field': None, 'pos': None, 'chamber': None}
+        self.now = [None, None, None, None] # temperature&status, field&status, position&status, chamber
         self.nowName = ["T(K)", "H(Oe)", "Pos(deg)"]
+        self.defaultWait = [waitFlag.stable, waitFlag.stable, waitFlag.stable, waitFlag.stable]
         self.type = type
         self.port = port
         self.error = [0.05, 1, 0.1]
@@ -24,24 +25,21 @@ class QuantumDesign(ins):
         pass
     def setTemp(self, setpoint: float, rate: float, approach: QDInstrumentBase.TemperatureApproach = QDInstrumentBase.TemperatureApproach.FastSettle):# in build
         self.res.SetTemperature(setpoint, rate, approach)
-        self.setpoint[0] = [setpoint, approach]
-        self.flag[0] = rate
+        self.setpoint['temp'] = [setpoint, approach]
+        self.flag['temprate'] = rate
     def setField(self, setpoint: float, rate: float = 100, approach: QDInstrumentBase.FieldApproach = QDInstrumentBase.FieldApproach.Linear):# in build
         self.res.SetField(setpoint, rate, approach, QDInstrumentBase.FieldMode.Persistent)
-        self.setpoint[1] = [setpoint, approach]
-        self.flag[1] = rate
+        self.setpoint['field'] = [setpoint, approach]
+        self.flag['fieldrate'] = rate
     def setPosition(self, setpoint: float, rate: float, mode: QDInstrumentBase.PositionMode = QDInstrumentBase.PositionMode.MoveToPosition):# in build
         self.res.SetPosition("Horizontal Rotator", setpoint, rate, mode)
-        self.setpoint[2] = [setpoint]
-        self.flag[2] = rate
+        self.setpoint['pos'] = [setpoint]
+        self.flag['posrate'] = rate
     def setChamber(self, command: QDInstrumentBase.ChamberCommand):
         self.res.SetChamber(command)
-        self.setpoint[3] = command
-    def setTarget(self, flag: bool, target: List[float]):
-        if flag:
-            self.targetpoint[0] = [target[0], None]
-        else:
-            self.targetpoint[0] = None
+        self.setpoint['chamber'] = command
+    def setTempTarget(self, target: Union[float, None]):
+        self.targetpoint['temp'] = [target, None] # consistent with the structure of setpoint
     def name2str(self) -> str:
         return f"{self.name:>40s}"
     def getNow(self):
@@ -51,31 +49,31 @@ class QuantumDesign(ins):
         self.now[3] = self.res.GetChamber(QDInstrumentBase.ChamberStatus(0))
     def flag2str(self) -> str:
         s = ""
-        if self.flag[0] is not None:
-            s += f"{self.flag[0]:>5.1f}K/min |"
+        if self.flag['temprate'] is not None:
+            s += f"{self.flag['temprate']:>5.1f}K/min |"
         else:
             s += 12*" "
-        if self.flag[1] is not None:
-            s += f"{self.flag[1]:>7.0f}Oe/s   |"
+        if self.flag['fieldrate'] is not None:
+            s += f"{self.flag['fieldrate']:>7.0f}Oe/s   |"
         else:
             s += 15*" "
-        if self.flag[2] is not None:
-            s += f"{self.flag[2]:>5.1f}Dg/s    "
+        if self.flag['posrate'] is not None:
+            s += f"{self.flag['posrate']:>5.1f}Dg/s    "
         else:
             s += 13*" "
         return s
     def setpoint2str(self) -> str:
         s = ""
-        if self.setpoint[0] is not None:
-            s += f"{self.setpoint[0][0]:>5.1f}K {self.setpoint[0][1].ToString():.4s}|"
+        if self.setpoint['temp'] is not None:
+            s += f"{self.setpoint['temp'][0]:>5.1f}K {self.setpoint['temp'][1].ToString():.4s}|"
         else:
             s += 12*" "
-        if self.setpoint[1] is not None:
-            s += f"{self.setpoint[1][0]:>+7.0f}Oe {self.setpoint[1][1].ToString():.4s}|"
+        if self.setpoint['field'] is not None:
+            s += f"{self.setpoint['field'][0]:>+7.0f}Oe {self.setpoint['field'][1].ToString():.4s}|"
         else:
             s += 15*" "
-        if self.setpoint[2] is not None:
-            s += f"{self.setpoint[2][0]:>5.1f}Dg      "
+        if self.setpoint['pos'] is not None:
+            s += f"{self.setpoint['pos'][0]:>5.1f}Dg      "
         else:
             s += 13*" "
         return s
@@ -103,18 +101,14 @@ class QuantumDesign(ins):
     def reach(self, flag: List[waitFlag]) -> bool:
         '''reach([Tflag, Fflag, Pflag, Cflag])'''
         reached = 4*[False]
-        for i in range(4):
+        for i, key in enumerate(self.setpoint.keys()):
             if flag[i] == waitFlag.none:
                 reached[i] = True
             elif flag[i] == waitFlag.stable:
                 reached[i] = int(self.now[i][2]) in self.waitStable[i]
             else:
-                if self.setpoint[i] != None:
-                    target = None
-                    if i < 3 and self.targetpoint[i] != None:
-                        target = self.targetpoint[i]
-                    else:
-                        target = self.setpoint[i]
+                if self.setpoint[key] != None:
+                    target = self.targetpoint[key] if self.targetpoint[key] != None else self.setpoint[key]
                     if i < 3:
                         reached[i] = bool(flag[i] * (target[0] - self.now[i][1]) < self.error[i])
                     else:

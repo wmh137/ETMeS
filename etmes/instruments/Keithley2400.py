@@ -1,20 +1,11 @@
 from .ins import ins, SM
 import pyvisa as visa
 
-def find_position(l, value):
-    if value <= l[0]:
-        return -1
-    if value >= l[-1]:
-        return l[-1], None
-    for i in range(len(l) - 1):
-        if l[i] < value <= l[i + 1]:
-            return l[i], l[i + 1]
-
 class Keithley2400(ins):
     def __init__(self, address: str, name: str = "Keithley 2400"):
         super().__init__(address, name)
-        self.flag = {'output': False, 'rsen': False, 'panel': False, 'senrange': None, 'cmpl': None}# output on/off, 2/4 wire, front/rear panel, sense range, compliance
-        self.setpoint = [None, None] # source, V/I
+        self.flag = {'output': False, 'rsen': False, 'panel': False, 'senrange': None, 'cmpl': None}
+        self.setpoint = {'source': 0.0, 'VI': SM.V}
         self.now = [None, None] # V, I
         self.nowName = ["V(V)", "I(A)"]
         self.wire = ["2W", "4W"]
@@ -29,12 +20,12 @@ class Keithley2400(ins):
         self.flag['panel'] = False if self.res.query(":ROUT:TERM?\n") == "FRON" else True
         sourFunc = self.res.query(":SOUR:FUNC?")
         if sourFunc == "VOLT":
-            self.setpoint[1] = SM.V
+            self.setpoint['VI'] = SM.V
         elif sourFunc == "CURR":
-            self.setpoint[1] = SM.I
-        self.setpoint[0] = float(self.res.query(f":SOUR:{self.VI[self.setpoint[1]]}:LEV?\n"))
-        self.flag['senrange'] = float(self.res.query(f":SENS:{self.VI[(self.setpoint[1]+1)%2]}:RANG?\n"))
-        self.flag['cmpl'] = float(self.res.query(f":SENS:{self.VI[(self.setpoint[1]+1)%2]}:PROT?\n"))
+            self.setpoint['VI'] = SM.I
+        self.setpoint['source'] = float(self.res.query(f":SOUR:{self.VI[self.setpoint['VI']]}:LEV?\n"))
+        self.flag['senrange'] = float(self.res.query(f":SENS:{self.VI[(self.setpoint['VI']+1)%2]}:RANG?\n"))
+        self.flag['cmpl'] = float(self.res.query(f":SENS:{self.VI[(self.setpoint['VI']+1)%2]}:PROT?\n"))
     def setRSEN(self, flag: bool):
         self.res.write(f":SYST:RSEN {flag:d}\n")
         self.flag['rsen'] = flag
@@ -50,12 +41,12 @@ class Keithley2400(ins):
             self.res.write(f":SENS:{self.VI[meas]}:RANG {cmpl:f}\n:SENS:{self.VI[meas]}:PROT {cmpl:f}\n")
         else:
             self.res.write(f":SENS:{self.VI[meas]}:PROT {cmpl:f}\n:SENS:{self.VI[meas]}:RANG {cmpl:f}\n")
-        self.setpoint[1] = srcFlag
+        self.setpoint['VI'] = srcFlag
         self.flag['senrange'] = float(self.res.query(f":SENS:{self.VI[meas]}:RANG?\n"))
         self.flag['cmpl'] = cmpl
     def setSrc(self, source: float):
-        self.res.write(f":SOUR:{self.VI[self.setpoint[1]]}:RANG {source}\n:SOUR:{self.VI[self.setpoint[1]]}:LEV {source}\n")
-        self.setpoint[0] = source
+        self.res.write(f":SOUR:{self.VI[self.setpoint['VI']]}:RANG {source}\n:SOUR:{self.VI[self.setpoint['VI']]}:LEV {source}\n")
+        self.setpoint['source'] = source
     def setOutput(self, flag: bool):
         self.res.write(f"OUTP {flag:d}\n")
         self.flag['output'] = flag
@@ -70,8 +61,8 @@ class Keithley2400(ins):
     def flag2str(self) -> str:
         return f"{self.ONOFF[self.flag['output']]:>5s}{self.wire[self.flag['rsen']]:>5s}{self.panel[self.flag['panel']]:>10s}"
     def setpoint2str(self):
-        if not ((self.setpoint[0] == None) | (self.setpoint[1] == None)):
-            return f"{self.setpoint[0]:>10.2e}{self.VI[self.setpoint[1]]:>10s}"
+        if not ((self.setpoint['source'] == None) | (self.setpoint['VI'] == None)):
+            return f"{self.setpoint['source']:>10.2e}{self.VI[self.setpoint['VI']]:>10s}"
         else:
             return 20*" "
     def now2str(self) -> str:

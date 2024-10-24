@@ -5,10 +5,11 @@ import time
 class EastChangingP7050(ins):
     def __init__(self, address: str, name: str = None):
         super().__init__(address, name)
-        self.flag = [False] # output on/off
-        self.setpoint = [None] # target field
+        self.flag = {'output': False}
+        self.setpoint = {'field': None}#[None] # target field
         self.now = [None] # field
         self.nowName = ["H(Oe)"]
+        self.defaultWait = waitFlag.stable
         self.error = [1]
     def insInit(self):
         self.res.baud_rate = 9600
@@ -23,7 +24,7 @@ class EastChangingP7050(ins):
     def setField(self, field: float):
         '''field in Oe'''
         self.res.write(f":FIELD {field/1e3:+7.4f}\n")
-        self.setpoint[0] = field
+        self.setpoint['field'] = field
         time.sleep(0.1)
     def stop(self):
         self.res.write(":FIELD 0\n")
@@ -32,8 +33,8 @@ class EastChangingP7050(ins):
     def flag2str(self) -> str:
         return super().flag2str()
     def setpoint2str(self) -> str:
-        if not (self.setpoint[0] == None):
-            return f"{self.setpoint[0]:>+18.2f}Oe"
+        if not (self.setpoint['field'] == None):
+            return f"{self.setpoint['field']:>+18.2f}Oe"
         else:
             return super().setpoint2str()
     def now2str(self) -> str:
@@ -48,6 +49,6 @@ class EastChangingP7050(ins):
             return super().now2record()
     def reach(self, flag: waitFlag) -> bool:
         if flag == waitFlag.stable:
-            return abs(self.now[0] - self.setpoint[0]) < self.error[0]
+            return abs(self.now[0] - self.setpoint['field']) < self.error[0]
         else:
-            return (self.setpoint[0] - self.now[0]) * flag < self.error[0]
+            return (self.setpoint['field'] - self.now[0]) * flag < self.error[0]

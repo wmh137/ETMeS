@@ -138,7 +138,7 @@ class exp():
                 self.f.write(len(ins.nowName)*",")
         self.f.write("\n")
         self.f.flush()
-    def wait(self, t: float, inss: List[ins], flags: List[waitFlag]):
+    def wait(self, t: float, inss: List[ins] = [], flags: List[waitFlag] = []):
         '''wait t (seconds) after all instruments reach their setpoints/targets'''
         self.__flag = "WAIT FOR "+" ".join([ins.name for ins in inss])
         reached = len(inss)*[False]
@@ -146,22 +146,28 @@ class exp():
         t1 = 0
         while True:
             self.refresh()
-            for i in range(len(inss)):
-                if flags[i] == waitFlag.none:
-                    reached[i] = True
-                elif flags[i] == waitFlag.stable or len(flags[i]) > 1:
-                    reached[i] = inss[i].reach(flags[i])
-                else:
-                    reached[i] = reached[i] or inss[i].reach(flags[i])
-            if all(reached):
-                t1 = time.time()
-                self.__flag = f"WAIT {t-t1+t0:.0f}s"
+            if inss == []:
+                time.sleep(self.__interval)
+            elif flags == []:
+                for i in range(len(inss)):
+                    reached[i] = inss[i].reach(inss[i].defaultWait)
             else:
-                t0 = time.time()
-                self.__flag = "WAIT FOR "+" ".join([ins.name for ins in inss])
-            if t1 - t0 > t:
-                break
-            time.sleep(self.__interval)
+                for i in range(len(inss)):
+                    if flags[i] == waitFlag.none:
+                        reached[i] = True
+                    elif flags[i] == waitFlag.stable or not isinstance(flags[i], waitFlag):
+                        reached[i] = inss[i].reach(flags[i])
+                    else:
+                        reached[i] = reached[i] or inss[i].reach(flags[i])
+                if all(reached):
+                    t1 = time.time()
+                    self.__flag = f"WAIT {t-t1+t0:.0f}s"
+                else:
+                    t0 = time.time()
+                    self.__flag = "WAIT FOR "+" ".join([ins.name for ins in inss])
+                if t1 - t0 > t:
+                    break
+                time.sleep(self.__interval)
         self.__flag = ""
     def standby(self):
         '''maintain the current states of the instruments'''

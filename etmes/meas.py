@@ -12,7 +12,7 @@ class meas():
     '''
     def __init__(self, exp: exp):
         self.__exp = exp
-    def SMUsrc(self, src: List[float], SMU: ins, delay: float = 0):
+    def SMUsrc(self, src: List[float], SMU: ins, delay: float = 0, pulse: bool = True):
         '''
         SMU source in order.
 
@@ -31,7 +31,8 @@ class meas():
             time.sleep(delay)
             self.__exp.refresh()
             self.__exp.record()
-        SMU.setSrc(0)
+        if pulse:
+            SMU.setSrc(0)
         self.__exp.setFlag("")
     def scanTemp(self, Tstart: float, Tstop: float, Tstep: float, Trate: float, Temp: ins, func: Callable):
         '''
@@ -46,10 +47,11 @@ class meas():
         Trate : float
             rate of warming/cooling
         Temp : ins
-            instrument of temperature controller.
-            Temp.setTemp(setpoint: float, rate: float) and Temp.setTarget(flag: bool, target: float=None) are required.
+            instrument of temperature controller
+            Temp.setTemp(setpoint: float, rate: float) and Temp.setTempTarget(target: Union[float, None]) are required.
         func : function
             a function contains actions at each target with no attribute
+            lambda expression is recommanded (e.g.: lambda: meas.SMUsrc([1e-6], k))
         '''
         if Tstop>Tstart:
             wf = waitFlag.positive
@@ -67,10 +69,10 @@ class meas():
         self.__exp.wait(10, [Temp], [waitFlag.stable])
         Temp.setTemp(Tstop, Trate)
         for i in range(n):
-            Temp.setTarget(True, Tstart+i*Tstep)
+            Temp.setTempTarget(Tstart+i*Tstep)
             self.__exp.wait(0, [Temp], [wf])
             func()
-        Temp.setTarget(False)
+        Temp.setTempTarget(None)
         Temp.setTemp(Tstop, Trate)
         self.__exp.wait(0, [Temp], [wf])
         func()
@@ -85,10 +87,11 @@ class meas():
         Fstep : float
             step of field
         Field : ins
-            Instrument of magnet controller
+            instrument of magnet controller
             Mag.setField(field: float) is required.
         func : function
             a function contains actions at each target with no attribute
+            lambda expression is recommanded (e.g.: lambda: meas.SMUsrc([1e-6], k))
         '''
         n = (Fstop-Fstart)/Fstep
         if n < 0:
@@ -117,6 +120,7 @@ class meas():
             interval of time
         func : function
             a function contains actions at each target with no attribute
+            lambda expression is recommanded (e.g.: lambda: meas.SMUsrc([1e-6], k))
         '''
         func()
         t0 = time.time()

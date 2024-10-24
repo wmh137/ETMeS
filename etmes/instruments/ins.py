@@ -33,11 +33,12 @@ class ins():
         self.res = None # resource
         self.flag = None # override
         self.setpoint = None # override
-        self.target = None # override
+        self.targetpoint = None # override
         self.now = None # override
         self.nowName = [] # override [str] (len(nowName)>=1)
         self.ONOFF = ["OFF", "ON"]
         self.log = [False, ""] # [bool, str]
+        self.defaultWait = waitFlag.none # override
     def write(self, cmd: str):
         if self.visa:
             self.res.write(cmd)
