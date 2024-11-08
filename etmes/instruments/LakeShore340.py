@@ -9,8 +9,7 @@ class LakeShore340(ins):
         self.flag = {'output': False}
         self.setpoint = {'setpoint': None, 'rate': None}
         self.targetpoint = None # temperature
-        self.now = [None, None] # temperarure, power
-        self.nowName = ["T(K)", "power(%)"]
+        self.now = {'T(K)': None, 'power(%)': None}
         self.defaultwait = waitFlag.stable
         self.error = [0.05]
     def insInit(self):
@@ -39,8 +38,8 @@ class LakeShore340(ins):
     def stop(self):
         self.res.write(f"RANGE 0\n")
     def getNow(self):
-        self.now[0] = float(self.res.query("KRDG? 0\n"))
-        self.now[1] = float(self.res.query("HTR?\n"))
+        self.now['T(K)'] = float(self.res.query("KRDG? 0\n"))
+        self.now['power(%)'] = float(self.res.query("HTR?\n"))
     def flag2str(self) -> str:
         return f"{self.ONOFF[self.flag['output']]:>20s}"
     def setpoint2str(self) -> str:
@@ -49,10 +48,10 @@ class LakeShore340(ins):
         else:
             return 20*" "
     def now2str(self) -> str:
-        return f"{self.now[0]:>9.2f}K{self.now[1]:>9.1f}%"
+        return f"{self.now['T(K)']:>9.2f}K{self.now['power(%)']:>9.1f}%"
     def now2record(self) -> str:
-        if (self.now[0] != None) and (self.now[1] != None):
-            return f"{self.now[0]:>6.3f},{self.now[1]:>6.3f}"
+        if (self.now['T(K)'] != None) and (self.now['power(%)'] != None):
+            return f"{self.now['T(K)']:>6.3f},{self.now['power(%)']:>6.3f}"
         else:
             return super().now2record()
     def reach(self, flag: waitFlag) -> bool:
@@ -60,10 +59,10 @@ class LakeShore340(ins):
             targetTemp = self.setpoint['setpoint']
         else:
             targetTemp = self.targetpoint
-        if (self.now[0] != None) and (targetTemp != None):
+        if (self.now['T(K)'] != None) and (targetTemp != None):
             if flag == waitFlag.stable:
-                return abs(self.now[0] - targetTemp) < self.error[0]
+                return abs(self.now['T(K)'] - targetTemp) < self.error[0]
             else:
-                return flag * (targetTemp - self.now[0]) < self.error[0]
+                return flag * (targetTemp - self.now['T(K)']) < self.error[0]
         else:
             return True

@@ -12,8 +12,7 @@ class QuantumDesign(ins):
         self.flag = {'temprate': None, 'fieldrate': None, 'posrate': None}
         self.setpoint = {'temp': None, 'field': None, 'pos': None, 'chamber': None}
         self.targetpoint = {'temp': None, 'field': None, 'pos': None, 'chamber': None}
-        self.now = [None, None, None, None] # temperature&status, field&status, position&status, chamber
-        self.nowName = ["T(K)", "H(Oe)", "Pos(deg)"]
+        self.now = {'T(K)': None, 'H(Oe)': None, 'Pos(deg)': None, 'Chamber': None}
         self.defaultWait = [waitFlag.stable, waitFlag.stable, waitFlag.stable, waitFlag.stable]
         self.type = type
         self.port = port
@@ -21,6 +20,7 @@ class QuantumDesign(ins):
         self.waitStable = [[1], [1, 4], [1], [1, 2, 3, 7, 8, 9]]
     def open(self):
         self.res = QDInstrumentFactory.GetQDInstrument(self.type, True, self.address, self.port)
+        self.getNow()
     def close(self):# in build
         pass
     def setTemp(self, setpoint: float, rate: float, approach: QDInstrumentBase.TemperatureApproach = QDInstrumentBase.TemperatureApproach.FastSettle):# in build
@@ -43,10 +43,10 @@ class QuantumDesign(ins):
     def name2str(self) -> str:
         return f"{self.name:>40s}"
     def getNow(self):
-        self.now[0] = self.res.GetTemperature(0, QDInstrumentBase.TemperatureStatus(0))
-        self.now[1] = self.res.GetField(0, QDInstrumentBase.FieldStatus(0))
-        self.now[2] = self.res.GetPosition("Horizontal Rotator", 0, QDInstrumentBase.PositionStatus(0))
-        self.now[3] = self.res.GetChamber(QDInstrumentBase.ChamberStatus(0))
+        self.now['T(K)'] = self.res.GetTemperature(0, QDInstrumentBase.TemperatureStatus(0))
+        self.now['H(Oe)'] = self.res.GetField(0, QDInstrumentBase.FieldStatus(0))
+        self.now['Pos(deg)'] = self.res.GetPosition("Horizontal Rotator", 0, QDInstrumentBase.PositionStatus(0))
+        self.now['Chamber'] = self.res.GetChamber(QDInstrumentBase.ChamberStatus(0))
     def flag2str(self) -> str:
         s = ""
         if self.flag['temprate'] is not None:
@@ -79,40 +79,56 @@ class QuantumDesign(ins):
         return s
     def now2str(self) -> str:
         s = ""
-        if self.now[0] is not None:
-            s += f"{self.now[0][1]:>5.1f}K {self.res.TemperatureStatusString(self.now[0][2]):>.4s}|"
+        if self.now['T(K)'] is not None:
+            if self.now['T(K)'][1] >= 100:
+                s += f"{self.now['T(K)'][1]:>5.1f}K"
+            elif self.now['T(K)'][1] >= 10:
+                s += f"{self.now['T(K)'][1]:>5.2f}K"
+            elif self.now['T(K)'][1] >= 1:
+                s += f"{self.now['T(K)'][1]:>5.3f}K"
+            else:
+                s += f"{self.now['T(K)'][1]*1000:>4.0f}mK"
+            s += f" {self.res.TemperatureStatusString(self.now['T(K)'][2]):>.4s}|"
         else:
             s += 12*" "
-        if self.now[1] is not None:
-            s += f"{self.now[1][1]:>+7.0f}Oe {self.res.FieldStatusString(self.now[1][2]):>.4s}|"
+        if self.now['H(Oe)'] is not None:
+            s += f"{self.now['H(Oe)'][1]:>+7.0f}Oe {self.res.FieldStatusString(self.now['H(Oe)'][2]):>.4s}|"
         else:
             s += 15*" "
-        if self.now[2] is not None:
-            s += f"{self.now[2][1]:>5.1f}Dg|"
+        if self.now['Pos(deg)'] is not None:
+            s += f"{self.now['Pos(deg)'][1]:>5.1f}Dg|"
         else:
             s += 8*" "
-        if self.now[3] is not None:
-            s += f"{self.res.ChamberStatusString(self.now[3][1]):>.5s}"
+        if self.now['Chamber'] is not None:
+            s += f"{self.res.ChamberStatusString(self.now['Chamber'][1]):>.5s}"
         else:
             s += 5*" "
         return s
     def now2record(self) -> str:
-        return f"{self.now[0][1]:>.5f},{self.now[1][1]:>.3f},{self.now[2][1]:>.3f}"
+        return f"{self.now['T(K)'][1]:>.5f},{self.now['H(Oe)'][1]:>.3f},{self.now['Pos(deg)'][1]:>.3f}"
     def reach(self, flag: List[waitFlag]) -> bool:
         '''reach([Tflag, Fflag, Pflag, Cflag])'''
         reached = 4*[False]
-        for i, key in enumerate(self.setpoint.keys()):
+        spKeys = list(self.setpoint.keys())
+        nowKeys = list(self.now.keys())
+        for i in range(len(spKeys)):
             if flag[i] == waitFlag.none:
                 reached[i] = True
             elif flag[i] == waitFlag.stable:
-                reached[i] = int(self.now[i][2]) in self.waitStable[i]
+                if spKeys[i] == "chamber":
+                    reached[i] = int(self.now[nowKeys[i]][1]) in self.waitStable[i]
+                else:
+                    reached[i] = int(self.now[nowKeys[i]][2]) in self.waitStable[i]
             else:
-                if self.setpoint[key] != None:
-                    target = self.targetpoint[key] if self.targetpoint[key] != None else self.setpoint[key]
-                    if i < 3:
-                        reached[i] = bool(flag[i] * (target[0] - self.now[i][1]) < self.error[i])
-                    else:
-                        reached[i] = True
+                if self.targetpoint[spKeys[i]] != None:
+                    target = self.targetpoint[spKeys[i]]
+                elif self.setpoint[spKeys[i]] != None:
+                    target = self.setpoint[spKeys[i]]
+                else:
+                    reached[i] = True
+                    continue
+                if i < 3:
+                    reached[i] = bool(flag[i] * (target - self.now[nowKeys[i]][1]) < self.error[i])
                 else:
                     reached[i] = True
         return all(reached)

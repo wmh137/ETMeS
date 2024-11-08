@@ -51,7 +51,7 @@ class exp():
         else:
             ins.open()
         ins.insInit()
-    def __logWrite(self, log: str):
+    def logWrite(self, log: str):
         self.__log.write(f"{self.__t:f} {log}\n")
         self.__log.flush()
     def start(self):
@@ -61,15 +61,15 @@ class exp():
             name = ins.name2str()
             self.instruments[ins][1] = len(name)
             nameStr += name+"|"
-            for var in ins.nowName:
-                fHeader += f",{ins.name}_{var}"
+            for key in ins.now.keys():
+                fHeader += f",{ins.name}_{key}"
         print(f"{nameStr}\n\n\n\n", end="")
         if self.f != None:
             self.f.write(fHeader+"\n")
             self.f.flush()
-            self.__logWrite(f"{self.f.name}")
+            self.logWrite(f"Save to {self.f.name}")
         else:
-            self.__logWrite("None")
+            self.logWrite("Save to None")
     def stop(self):
         '''stop all instruments'''
         for ins in self.instruments:
@@ -98,9 +98,9 @@ class exp():
         self.__t = time.time()
     def refresh(self):
         '''refresh the current states of the instruments'''
-        flagStr = 6*" "+"FLAG|"
-        setpointStr = 2*" "+"SETPOINT|"
-        nowStr = 7*" "+"NOW|"
+        flagStr = 6*" "+"Flag|"
+        setpointStr = 2*" "+"Setpoint|"
+        nowStr = 7*" "+"Now|"
         for ins, value in self.instruments.items():
             if value[0]:
                 fStr = ins.flag2str()
@@ -118,7 +118,7 @@ class exp():
                 nStr = value[1]*" "
             nowStr += nStr+"|"
             if ins.log[0]:
-                self.__logWrite(f"{ins.address:s} {ins.name:s}: {ins.log[1]:s}")
+                self.logWrite(f"{ins.address:s} {ins.name:s}: {ins.log[1]:s}")
                 ins.log[0] = False
         sys.stdout.write("\x1b[3A") # Powershell on Windows 7 does not support ANSI escape codes
         printStr = f"{flagStr}\n{setpointStr}\n{nowStr} {f'{self.__t-self.__t0:>.2f}s':<20s}\n"
@@ -128,27 +128,25 @@ class exp():
     def record(self, comment: str = ""):
         '''record the current states of the instruments'''
         if self.f == None:
-            self.__flag = "WARNING: record failed"
+            self.__flag = "Warning: record failed"
             return
         self.f.write(f"{comment},{self.__t:.3f}")
         for ins, value in self.instruments.items():
             if value[0]:
                 self.f.write(f",{ins.now2record()}")
             else:
-                self.f.write(len(ins.nowName)*",")
+                self.f.write(len(ins.now)*",")
         self.f.write("\n")
         self.f.flush()
     def wait(self, t: float, inss: List[ins] = [], flags: List[waitFlag] = []):
         '''wait t (seconds) after all instruments reach their setpoints/targets'''
-        self.__flag = "WAIT FOR "+" ".join([ins.name for ins in inss])
+        self.__flag = "Wait for "+" ".join([ins.name for ins in inss])
         reached = len(inss)*[False]
         t0 = time.time()
         t1 = 0
         while True:
             self.refresh()
-            if inss == []:
-                time.sleep(self.__interval)
-            elif flags == []:
+            if flags == []:
                 for i in range(len(inss)):
                     reached[i] = inss[i].reach(inss[i].defaultWait)
             else:
@@ -159,20 +157,20 @@ class exp():
                         reached[i] = inss[i].reach(flags[i])
                     else:
                         reached[i] = reached[i] or inss[i].reach(flags[i])
-                if all(reached):
-                    t1 = time.time()
-                    self.__flag = f"WAIT {t-t1+t0:.0f}s"
-                else:
-                    t0 = time.time()
-                    self.__flag = "WAIT FOR "+" ".join([ins.name for ins in inss])
-                if t1 - t0 > t:
-                    break
-                time.sleep(self.__interval)
+            if all(reached):
+                t1 = time.time()
+                self.__flag = f"Wait {t-t1+t0:.0f}s"
+            else:
+                t0 = time.time()
+                self.__flag = "Wait for "+" ".join([ins.name for ins in inss])
+            if t1 - t0 > t:
+                break
+            time.sleep(self.__interval)
         self.__flag = ""
     def standby(self):
         '''maintain the current states of the instruments'''
-        self.__flag = "STANDBY"
-        self.__logWrite("STANDBY")
+        self.__flag = "Standby"
+        self.logWrite("Standby")
         while True:
             self.refresh()
             time.sleep(self.__interval)

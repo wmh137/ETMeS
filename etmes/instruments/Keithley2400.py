@@ -6,8 +6,7 @@ class Keithley2400(ins):
         super().__init__(address, name)
         self.flag = {'output': False, 'rsen': False, 'panel': False, 'senrange': None, 'cmpl': None}
         self.setpoint = {'source': 0.0, 'VI': SM.V}
-        self.now = [None, None] # V, I
-        self.nowName = ["V(V)", "I(A)"]
+        self.now = {'V(V)': None, 'I(A)': None}
         self.wire = ["2W", "4W"]
         self.VI = ["VOLT", "CURR"]
         self.panel = ["FRONT", "REAR"]
@@ -55,9 +54,12 @@ class Keithley2400(ins):
         self.flag['output'] = False
     def getNow(self):
         if self.flag['output']:
-            self.now = [float(elem) for elem in self.res.query(":READ?\n").split(",")]
+            v_i = [float(elem) for elem in self.res.query(":READ?\n").split(",")]
+            self.now['V(V)'] = v_i[0]
+            self.now['I(A)'] = v_i[1]
         else:
-            self.now = [None, None]
+            self.now['V(V)'] = None
+            self.now['I(A)'] = None
     def flag2str(self) -> str:
         return f"{self.ONOFF[self.flag['output']]:>5s}{self.wire[self.flag['rsen']]:>5s}{self.panel[self.flag['panel']]:>10s}"
     def setpoint2str(self):
@@ -66,12 +68,12 @@ class Keithley2400(ins):
         else:
             return 20*" "
     def now2str(self) -> str:
-        if not ((self.now[0] == None) | (self.now[1] == None)):
-            return f" {self.now[0]:>8.1e}V {self.now[1]:>8.1e}A"
+        if not ((self.now['V(V)'] == None) | (self.now['I(A)'] == None)):
+            return f" {self.now['V(V)']:>8.1e}V {self.now['I(A)']:>8.1e}A"
         else:
             return 20*" "
     def now2record(self) -> str:
-        if not ((self.now[0] == None) | (self.now[1] == None)):
-            return f"{self.now[0]:>9e},{self.now[1]:>9e}"
+        if not ((self.now['V(V)'] == None) | (self.now['I(A)'] == None)):
+            return f"{self.now['V(V)']:>9e},{self.now['I(A)']:>9e}"
         else:
             return super().now2record()

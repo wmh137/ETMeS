@@ -1,5 +1,5 @@
-from typing import List, Callable
-import time
+from typing import List, Union, Callable
+import time, threading
 from etmes import exp, ins, waitFlag
 
 class meas():
@@ -12,6 +12,14 @@ class meas():
     '''
     def __init__(self, exp: exp):
         self.__exp = exp
+        self.__action = None
+        self.__actionFlag = False
+    def __actionRepeat(self, interval: float, func: Callable):
+        while True:
+            if not self.__actionFlag:
+                break
+            func()
+            time.sleep(interval)
     def SMUsrc(self, src: List[float], SMU: ins, delay: float = 0, pulse: bool = True):
         '''
         SMU source in order.
@@ -127,3 +135,22 @@ class meas():
         while time.time()-t0<t:
             func()
             self.__exp.wait(interval, [], [])
+    def startAction(self, interval: float, func: Callable):
+        '''
+        execute **func** per **interval** seconds
+
+        Attributes
+        ----------
+        interval : float
+            interval of time
+        func : function
+            a function contains actions at each target with no attribute
+            lambda expression is recommanded (e.g.: lambda: meas.SMUsrc([1e-6], k))
+        '''
+        self.__action = threading.Thread(target = lambda: self.__actionRepeat(interval, func), daemon=True)
+        self.__actionFlag = True
+        self.__action.start()
+    def stopAction(self):
+        self.__actionFlag = False
+        self.__action.join()
+        self.__action = None

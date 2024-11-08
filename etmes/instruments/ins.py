@@ -31,11 +31,10 @@ class ins():
         else:
             self.name = address
         self.res = None # resource
-        self.flag = None # override
-        self.setpoint = None # override
+        self.flag = {} # override
+        self.setpoint = {} # override
         self.targetpoint = None # override
-        self.now = None # override
-        self.nowName = [] # override [str] (len(nowName)>=1)
+        self.now = {} # override
         self.ONOFF = ["OFF", "ON"]
         self.log = [False, ""] # [bool, str]
         self.defaultWait = waitFlag.none # override
