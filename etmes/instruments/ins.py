@@ -31,13 +31,13 @@ class ins():
         else:
             self.name = address
         self.res = None # resource
-        self.flag = [] # override
-        self.setpoint = [] # override
-        self.target = [] # override
-        self.now = [] # override
-        self.nowName = [] # override [str]
+        self.flag = {} # override
+        self.setpoint = {} # override
+        self.targetpoint = None # override
+        self.now = {} # override
         self.ONOFF = ["OFF", "ON"]
         self.log = [False, ""] # [bool, str]
+        self.defaultWait = waitFlag.none # override
     def write(self, cmd: str):
         if self.visa:
             self.res.write(cmd)
@@ -61,12 +61,12 @@ class ins():
     def name2str(self) -> str:
         return f"{self.name:>20s}"
     def flag2str(self) -> str: # override
-        return 20*' '
+        return 20*" "
     def setpoint2str(self) -> str: # override
-        return 20*' '
+        return 20*" "
     def now2str(self) -> str: # override
-        return 20*' '
+        return 20*" "
     def now2record(self) -> str: # override
-        return len(self.now)*','
+        return (len(self.nowName)-1)*","
     def reach(self, flag: waitFlag) -> bool: # override
         return True

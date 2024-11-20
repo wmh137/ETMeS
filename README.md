@@ -13,7 +13,7 @@ Basic usage of python is enough !
 ## Requirement
 
 - Windows >= 10 (Powershell on Windows 7 does not support ANSI escape codes)
-- python >= 3.8, pyvisa, pythonnet
+- python >= 3.8, pyvisa, pythonnet (optional), matplotlib (optional)
 - .NET
 
 ## Basic usage
@@ -25,8 +25,7 @@ You need to write code as follow steps:
 1. instantiate a experiment with your instruments and path of data file
 `exp = etmes.etmes([k], "data")`
 1. control instruments as you want
-1. experiment standby (recommend) or stop
-`exp.standby()`/`exp.stop()`
+1. experiment standby (recommend) `exp.standby()` or stop `exp.stop()`
 
 Following principles should be followed:
 

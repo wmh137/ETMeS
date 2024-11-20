@@ -1,5 +1,5 @@
-from typing import List, Callable
-import time
+from typing import List, Union, Callable
+import time, threading
 from etmes import exp, ins, waitFlag
 
 class meas():
@@ -12,7 +12,15 @@ class meas():
     '''
     def __init__(self, exp: exp):
         self.__exp = exp
-    def SMUsrc(self, src: List[float], SMU: ins, delay: float = 0):
+        self.__action = None
+        self.__actionFlag = False
+    def __actionRepeat(self, interval: float, func: Callable):
+        while True:
+            if not self.__actionFlag:
+                break
+            func()
+            time.sleep(interval)
+    def SMUsrc(self, src: List[float], SMU: ins, delay: float = 0, pulse: bool = True):
         '''
         SMU source in order.
 
@@ -31,7 +39,8 @@ class meas():
             time.sleep(delay)
             self.__exp.refresh()
             self.__exp.record()
-        SMU.setSrc(0)
+        if pulse:
+            SMU.setSrc(0)
         self.__exp.setFlag("")
     def scanTemp(self, Tstart: float, Tstop: float, Tstep: float, Trate: float, Temp: ins, func: Callable):
         '''
@@ -46,10 +55,11 @@ class meas():
         Trate : float
             rate of warming/cooling
         Temp : ins
-            instrument of temperature controller.
-            Temp.setTemp(setpoint: float, rate: float) and Temp.setTarget(flag: bool, target: float=None) are required.
+            instrument of temperature controller
+            Temp.setTemp(setpoint: float, rate: float) and Temp.setTempTarget(target: Union[float, None]) are required.
         func : function
             a function contains actions at each target with no attribute
+            lambda expression is recommanded (e.g.: lambda: meas.SMUsrc([1e-6], k))
         '''
         if Tstop>Tstart:
             wf = waitFlag.positive
@@ -67,10 +77,10 @@ class meas():
         self.__exp.wait(10, [Temp], [waitFlag.stable])
         Temp.setTemp(Tstop, Trate)
         for i in range(n):
-            Temp.setTarget(True, Tstart+i*Tstep)
+            Temp.setTempTarget(Tstart+i*Tstep)
             self.__exp.wait(0, [Temp], [wf])
             func()
-        Temp.setTarget(False)
+        Temp.setTempTarget(None)
         Temp.setTemp(Tstop, Trate)
         self.__exp.wait(0, [Temp], [wf])
         func()
@@ -85,10 +95,11 @@ class meas():
         Fstep : float
             step of field
         Field : ins
-            Instrument of magnet controller
+            instrument of magnet controller
             Mag.setField(field: float) is required.
         func : function
             a function contains actions at each target with no attribute
+            lambda expression is recommanded (e.g.: lambda: meas.SMUsrc([1e-6], k))
         '''
         n = (Fstop-Fstart)/Fstep
         if n < 0:
@@ -107,3 +118,39 @@ class meas():
         Mag.setField(Fstop)
         self.__exp.wait(5, [Mag], [waitFlag.stable])
         func()
+    def scanTime(self, t: float, interval: float, func: Callable):
+        '''
+        Attributes
+        ----------
+        time : float
+            total time
+        interval : float
+            interval of time
+        func : function
+            a function contains actions at each target with no attribute
+            lambda expression is recommanded (e.g.: lambda: meas.SMUsrc([1e-6], k))
+        '''
+        func()
+        t0 = time.time()
+        while time.time()-t0<t:
+            func()
+            self.__exp.wait(interval, [], [])
+    def startAction(self, interval: float, func: Callable):
+        '''
+        execute **func** per **interval** seconds
+
+        Attributes
+        ----------
+        interval : float
+            interval of time
+        func : function
+            a function contains actions at each target with no attribute
+            lambda expression is recommanded (e.g.: lambda: meas.SMUsrc([1e-6], k))
+        '''
+        self.__action = threading.Thread(target = lambda: self.__actionRepeat(interval, func), daemon=True)
+        self.__actionFlag = True
+        self.__action.start()
+    def stopAction(self):
+        self.__actionFlag = False
+        self.__action.join()
+        self.__action = None
