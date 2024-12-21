@@ -1,15 +1,19 @@
-from .ins import ins, SM
+from .ins import insVisa
+from .insBG import insBG
+from .insEnum import SM
 import pyvisa as visa
 
-class Keithley2400(ins):
+class Keithley2400(insVisa, insBG):
     def __init__(self, address: str, name: str = "Keithley 2400"):
-        super().__init__(address, name)
+        insVisa.__init__(self, address, name)
+        insBG.__init__(self)
         self.flag = {'output': False, 'rsen': False, 'panel': False, 'senrange': None, 'cmpl': None}
         self.setpoint = {'source': 0.0, 'VI': SM.V}
         self.now = {'V(V)': None, 'I(A)': None}
         self.wire = ["2W", "4W"]
         self.VI = ["VOLT", "CURR"]
         self.panel = ["FRONT", "REAR"]
+    # ins method
     def insInit(self):
         self.res.write_termination = ""
         self.res.read_termination = "\n"
@@ -25,6 +29,38 @@ class Keithley2400(ins):
         self.setpoint['source'] = float(self.res.query(f":SOUR:{self.VI[self.setpoint['VI']]}:LEV?\n"))
         self.flag['senrange'] = float(self.res.query(f":SENS:{self.VI[(self.setpoint['VI']+1)%2]}:RANG?\n"))
         self.flag['cmpl'] = float(self.res.query(f":SENS:{self.VI[(self.setpoint['VI']+1)%2]}:PROT?\n"))
+    def stop(self):
+        self.res.write("OUTP 0\n")
+        self.flag['output'] = False
+    def flag2str(self) -> str:
+        return f"{self.ONOFF[self.flag['output']]:>5s}{self.wire[self.flag['rsen']]:>5s}{self.panel[self.flag['panel']]:>10s}"
+    def setpoint2str(self):
+        if not ((self.setpoint['source'] == None) | (self.setpoint['VI'] == None)):
+            return f"{self.setpoint['source']:>10.2e}{self.VI[self.setpoint['VI']]:>10s}"
+        else:
+            return 20*" "
+    def now2str(self) -> str:
+        if not ((self.now['V(V)'] == None) | (self.now['I(A)'] == None)):
+            return f" {self.now['V(V)']:>8.1e}V {self.now['I(A)']:>8.1e}A"
+        else:
+            return 20*" "
+    def now2record(self) -> str:
+        if not ((self.now['V(V)'] == None) | (self.now['I(A)'] == None)):
+            return f"{self.now['V(V)']:>9e},{self.now['I(A)']:>9e}"
+        else:
+            return super().now2record()
+    # insBG method
+    def getNow(self):
+        if self.flag['output']:
+            v_i = [float(elem) for elem in self.res.query(":READ?\n").split(",")]
+            self.now['V(V)'] = v_i[0]
+            self.now['I(A)'] = v_i[1]
+        else:
+            self.now['V(V)'] = None
+            self.now['I(A)'] = None
+    def setSrc(self, source: float):
+        self.res.write(f":SOUR:{self.VI[self.setpoint['VI']]}:RANG {source}\n:SOUR:{self.VI[self.setpoint['VI']]}:LEV {source}\n")
+        self.setpoint['source'] = source
     def setRSEN(self, flag: bool):
         self.res.write(f":SYST:RSEN {flag:d}\n")
         self.flag['rsen'] = flag
@@ -43,37 +79,6 @@ class Keithley2400(ins):
         self.setpoint['VI'] = srcFlag
         self.flag['senrange'] = float(self.res.query(f":SENS:{self.VI[meas]}:RANG?\n"))
         self.flag['cmpl'] = cmpl
-    def setSrc(self, source: float):
-        self.res.write(f":SOUR:{self.VI[self.setpoint['VI']]}:RANG {source}\n:SOUR:{self.VI[self.setpoint['VI']]}:LEV {source}\n")
-        self.setpoint['source'] = source
     def setOutput(self, flag: bool):
         self.res.write(f"OUTP {flag:d}\n")
         self.flag['output'] = flag
-    def stop(self):
-        self.res.write("OUTP 0\n")
-        self.flag['output'] = False
-    def getNow(self):
-        if self.flag['output']:
-            v_i = [float(elem) for elem in self.res.query(":READ?\n").split(",")]
-            self.now['V(V)'] = v_i[0]
-            self.now['I(A)'] = v_i[1]
-        else:
-            self.now['V(V)'] = None
-            self.now['I(A)'] = None
-    def flag2str(self) -> str:
-        return f"{self.ONOFF[self.flag['output']]:>5s}{self.wire[self.flag['rsen']]:>5s}{self.panel[self.flag['panel']]:>10s}"
-    def setpoint2str(self):
-        if not ((self.setpoint['source'] == None) | (self.setpoint['VI'] == None)):
-            return f"{self.setpoint['source']:>10.2e}{self.VI[self.setpoint['VI']]:>10s}"
-        else:
-            return 20*" "
-    def now2str(self) -> str:
-        if not ((self.now['V(V)'] == None) | (self.now['I(A)'] == None)):
-            return f" {self.now['V(V)']:>8.1e}V {self.now['I(A)']:>8.1e}A"
-        else:
-            return 20*" "
-    def now2record(self) -> str:
-        if not ((self.now['V(V)'] == None) | (self.now['I(A)'] == None)):
-            return f"{self.now['V(V)']:>9e},{self.now['I(A)']:>9e}"
-        else:
-            return super().now2record()

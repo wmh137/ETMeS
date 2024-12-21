@@ -1,7 +1,9 @@
 import time, threading, sys, os, copy
 from typing import List, Union
 import pyvisa as visa
-from .instruments.ins import ins, waitFlag
+from .instruments.ins import ins
+from .instruments.insBG import insBG
+from .instruments.insEnum import insType, waitFlag
 
 def checkFile(name: str):
     if os.path.exists(name):
@@ -25,7 +27,7 @@ class exp():
             name of data file without extensition name
     '''
     def __init__(self, instruments: List[ins], dataFile: Union[str, None]="", debug: bool=False):
-        self.__rm = visa.ResourceManager()
+        self.__rm = {'visa': visa.ResourceManager()}
         for ins in instruments:
             self.__addIns(ins)
         self.instruments = dict(zip(instruments, [copy.deepcopy([True, 20]) for i in range(len(instruments))])) # {ins: [required(bool), displaywidth(int)]}
@@ -46,8 +48,8 @@ class exp():
         if not debug:
             self.start()
     def __addIns(self, ins: ins):
-        if ins.visa:
-            ins.res = self.__rm.open_resource(ins.address)
+        if ins.type == insType.visa:
+            ins.res = self.__rm['visa'].open_resource(ins.address)
         else:
             ins.open()
         ins.insInit()
@@ -74,11 +76,11 @@ class exp():
         '''stop all instruments'''
         for ins in self.instruments:
             ins.stop()
-            if ins.visa:
+            if ins.type == insType.visa:
                 ins.res.close()
             else:
                 ins.close()
-        self.__rm.close()
+        self.__rm['visa'].close()
         self.f.close()
     def setInterval(self, t: float):
         self.__interval = t
@@ -117,9 +119,9 @@ class exp():
             else:
                 nStr = value[1]*" "
             nowStr += nStr+"|"
-            if ins.log[0]:
-                self.logWrite(f"{ins.address:s} {ins.name:s}: {ins.log[1]:s}")
-                ins.log[0] = False
+            if len(ins.log):
+                self.logWrite(f"{ins.address:s} {ins.name:s}: {ins.log:s}")
+                ins.log = ""
         sys.stdout.write("\x1b[3A") # Powershell on Windows 7 does not support ANSI escape codes
         printStr = f"{flagStr}\n{setpointStr}\n{nowStr} {f'{self.__t-self.__t0:>.2f}s':<20s}\n"
         print(printStr, end="")
@@ -138,7 +140,7 @@ class exp():
                 self.f.write(len(ins.now)*",")
         self.f.write("\n")
         self.f.flush()
-    def wait(self, t: float, inss: List[ins] = [], flags: List[waitFlag] = []):
+    def wait(self, t: float, inss: List[insBG] = [], flags: List[waitFlag] = []):
         '''wait t (seconds) after all instruments reach their setpoints/targets'''
         self.__flag = "Wait for "+" ".join([ins.name for ins in inss])
         reached = len(inss)*[False]
@@ -148,7 +150,7 @@ class exp():
             self.refresh()
             if flags == []:
                 for i in range(len(inss)):
-                    reached[i] = inss[i].reach(inss[i].defaultWait)
+                    reached[i] = inss[i].reach()
             else:
                 for i in range(len(inss)):
                     if flags[i] == waitFlag.none:

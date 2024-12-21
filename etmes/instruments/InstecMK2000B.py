@@ -1,5 +1,5 @@
-from .ins import ins, waitFlag
-from typing import Union
+from .ins import insVisa
+from .insBG import TempController
 import pyvisa as visa
 from enum import IntEnum
 
@@ -8,34 +8,21 @@ class CH(IntEnum):
     HC = 1 # Heat and Cool
     CO = 2 # Cool Only
 
-class InstecMK2000B(ins):
+class InstecMK2000B(insVisa, TempController):
     def __init__(self, address: str, name: str = "InstecMK2000B"):
-        super().__init__(address, name)
+        insVisa.__init__(self, address, name)
+        TempController.__init__(self)
         self.flag = {'CH': None} # CH in build
-        self.setpoint = {'setpoint': None, 'rate': None}
-        self.targetpoint = None # temperature
-        self.now = {'T(K)': None, 'power(%)': None}
-        self.defaultWait = waitFlag.stable
+        self.now['power(%)'] = None
         self.CHStr = ["Heat Only", "Heat&Cool", "Cool Only"]
-        self.error = [0.1]
+        self.error = 0.1
+    # ins method
     def insInit(self):
         self.res.write_termination = ""
         self.res.read_termination = "\r\n"
         self.flag['CH'] = int(self.res.query("TEMP:CHSW?\n"))
-    def setCH(self, flag: CH):
-        self.res.write(f"TEMP:CHSW {flag:d}\n")
-        self.flag['CH'] = flag
-    def setTemp(self, setpoint: float, rate: float):
-        self.res.write(f"TEMP:RAMP {setpoint-273.15:f},{rate:f}\n")
-        self.setpoint['setpoint'] = setpoint
-        self.setpoint['rate'] = abs(rate)
-    def setTempTarget(self, target: Union[float, None]):
-        self.targetpoint = target
     def stop(self):
         self.res.write("TEMP:STOP\n")
-    def getNow(self):
-        self.now['T(K)'] = float(self.res.query("TEMP:RTIN?\n").split(":")[2])+273.15
-        self.now['power(%)'] = float(self.res.query("TEMP:POW?\n"))*100
     def flag2str(self) -> str:
         return f"{self.CHStr[self.flag['CH']]:>20s}"
     def setpoint2str(self) -> str:
@@ -50,15 +37,14 @@ class InstecMK2000B(ins):
             return f"{self.now['T(K)']:>6.3f},{self.now['power(%)']:>6.3f}"
         else:
             return super().now2record()
-    def reach(self, flag: waitFlag) -> bool:
-        if self.targetpoint == None:
-            targetTemp = self.setpoint['setpoint']
-        else:
-            targetTemp = self.targetpoint
-        if (self.now['T(K)'] != None) and (targetTemp != None):
-            if flag == waitFlag.stable:
-                return abs(self.now['T(K)'] - targetTemp) < self.error[0]
-            else:
-                return flag * (targetTemp - self.now['T(K)']) < self.error[0]
-        else:
-            return True
+    # insBG method
+    def getNow(self):
+        self.now['T(K)'] = float(self.res.query("TEMP:RTIN?\n").split(":")[2])+273.15
+        self.now['power(%)'] = float(self.res.query("TEMP:POW?\n"))*100
+    def setCH(self, flag: CH):
+        self.res.write(f"TEMP:CHSW {flag:d}\n")
+        self.flag['CH'] = flag
+    def setTemp(self, setpoint: float, rate: float):
+        self.res.write(f"TEMP:RAMP {setpoint-273.15:f},{rate:f}\n")
+        self.setpoint['setpoint'] = setpoint
+        self.setpoint['rate'] = abs(rate)
