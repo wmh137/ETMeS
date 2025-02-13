@@ -1,16 +1,16 @@
-from .ins import insVisa
-from .insBG import TempController
+from .insEnum import *
+from .ins import TempController
 import pyvisa as visa
 import time
 
-class LakeShore340(insVisa, TempController):
-    def __init__(self, address: str, name: str = None):
-        insVisa.__init__(self, address, name)
-        TempController.__init__(self)
+class LakeShore340(TempController):
+    def __data__(self):
+        super().__data__()
         self.flag = {'output': False}
         self.now['power(%)'] = None
         self.error = 0.05
-    # ins method
+    def __init__(self, address: str, name: str = None):
+        super().__init__(address, name, insType.visa)
     def insInit(self):
         self.res.baud_rate = 9600
         self.res.parity = visa.constants.Parity(1)
@@ -21,6 +21,13 @@ class LakeShore340(insVisa, TempController):
         time.sleep(1)
     def stop(self):
         self.res.write(f"RANGE 0\n")
+    # get & check
+    def getNow(self):
+        self.now['T(K)'] = float(self.res.query("KRDG? 0\n"))
+        self.now['power(%)'] = float(self.res.query("HTR?\n"))
+    def reach(self, flag: waitFlag = waitFlag.stable) -> bool:
+        return super().reach(flag)
+    # show & record
     def flag2str(self) -> str:
         return f"{self.ONOFF[self.flag['output']]:>20s}"
     def setpoint2str(self) -> str:
@@ -35,10 +42,12 @@ class LakeShore340(insVisa, TempController):
             return f"{self.now['T(K)']:>6.3f},{self.now['power(%)']:>6.3f}"
         else:
             return super().now2record()
-    # insBG method
-    def getNow(self):
-        self.now['T(K)'] = float(self.res.query("KRDG? 0\n"))
-        self.now['power(%)'] = float(self.res.query("HTR?\n"))
+    # set
+    def setTemp(self, setpoint: float):
+        self.res.write(f"SETP 1,{setpoint:f}\n")
+        time.sleep(0.5)
+        self.setpoint['setpoint'] = setpoint
+        self.flag['output'] = True
     def setRamp(self, rate: float):
         if not rate:
             self.res.write(f"RAMP 1,0\n")
@@ -47,8 +56,3 @@ class LakeShore340(insVisa, TempController):
             self.res.write(f"RAMP 1,1,{rate:f}\n")
             self.setpoint['rate'] = abs(rate)
         time.sleep(0.5)
-    def setTemp(self, setpoint: float):
-        self.res.write(f"SETP 1,{setpoint:f}\n")
-        time.sleep(0.5)
-        self.setpoint['setpoint'] = setpoint
-        self.flag['output'] = True

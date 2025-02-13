@@ -1,4 +1,4 @@
-from .instruments.insBG import SMU, TempController, MagnetController
+from .instruments.ins import *
 from typing import List, Callable
 import time, threading
 from etmes import exp

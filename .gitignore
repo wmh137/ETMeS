@@ -2,3 +2,5 @@
 *.log
 /*.py
 __pycache__
+.stfolder
+.stignore

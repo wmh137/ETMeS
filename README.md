@@ -35,8 +35,7 @@ Following principles should be followed:
 `exp.refresh()`
 - record the status manually as well
 `exp.record()`
-- if the class of your instrument is not applied, please write it by yourself: inherit `class ins`, override necessary functions and define specific functions of your instrument
-`class myins(ins)`
+- if the class of your instrument is not applied, please write it by yourself: inherit `class ins` or its subclass, override necessary functions and define specific functions of your instrument
 
 Some measurements are applied in `etmes.meas`. Instantiate a measurement `m = etmes.meas(exp)` and call its functions.
 

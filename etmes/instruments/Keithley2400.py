@@ -1,19 +1,18 @@
-from .ins import insVisa
-from .insBG import insBG
-from .insEnum import SM
+from .insEnum import *
+from .ins import SMU
 import pyvisa as visa
 
-class Keithley2400(insVisa, insBG):
-    def __init__(self, address: str, name: str = "Keithley 2400"):
-        insVisa.__init__(self, address, name)
-        insBG.__init__(self)
+class Keithley2400(SMU):
+    def __data__(self):
+        super().__data__()
         self.flag = {'output': False, 'rsen': False, 'panel': False, 'senrange': None, 'cmpl': None}
         self.setpoint = {'source': 0.0, 'VI': SM.V}
         self.now = {'V(V)': None, 'I(A)': None}
         self.wire = ["2W", "4W"]
         self.VI = ["VOLT", "CURR"]
         self.panel = ["FRONT", "REAR"]
-    # ins method
+    def __init__(self, address: str, name: str = "Keithley 2400"):
+        super().__init__(address, name, insType.visa)
     def insInit(self):
         self.res.write_termination = ""
         self.res.read_termination = "\n"
@@ -32,6 +31,18 @@ class Keithley2400(insVisa, insBG):
     def stop(self):
         self.res.write("OUTP 0\n")
         self.flag['output'] = False
+    # get & check
+    def getNow(self):
+        if self.flag['output']:
+            v_i = [float(elem) for elem in self.res.query(":READ?\n").split(",")]
+            self.now['V(V)'] = v_i[0]
+            self.now['I(A)'] = v_i[1]
+        else:
+            self.now['V(V)'] = None
+            self.now['I(A)'] = None
+    def reach(self, flag: waitFlag = waitFlag.stable) -> bool:
+        return super().reach(flag)
+    # show & record
     def flag2str(self) -> str:
         return f"{self.ONOFF[self.flag['output']]:>5s}{self.wire[self.flag['rsen']]:>5s}{self.panel[self.flag['panel']]:>10s}"
     def setpoint2str(self):
@@ -49,15 +60,7 @@ class Keithley2400(insVisa, insBG):
             return f"{self.now['V(V)']:>9e},{self.now['I(A)']:>9e}"
         else:
             return super().now2record()
-    # insBG method
-    def getNow(self):
-        if self.flag['output']:
-            v_i = [float(elem) for elem in self.res.query(":READ?\n").split(",")]
-            self.now['V(V)'] = v_i[0]
-            self.now['I(A)'] = v_i[1]
-        else:
-            self.now['V(V)'] = None
-            self.now['I(A)'] = None
+    # set
     def setSrc(self, source: float):
         self.res.write(f":SOUR:{self.VI[self.setpoint['VI']]}:RANG {source}\n:SOUR:{self.VI[self.setpoint['VI']]}:LEV {source}\n")
         self.setpoint['source'] = source

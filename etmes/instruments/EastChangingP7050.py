@@ -1,15 +1,15 @@
-from .ins import insVisa
-from .insBG import MagnetController
+from .insEnum import *
+from .ins import MagnetController
 import pyvisa as visa
 import time
 
-class EastChangingP7050(insVisa, MagnetController):
-    def __init__(self, address: str, name: str = None):
-        insVisa.__init__(self, address, name)
-        MagnetController.__init__(self)
+class EastChangingP7050(MagnetController):
+    def __data__(self):
+        super().__data__()
         self.flag = {'output': False}
         self.error = 1
-    # ins method
+    def __init__(self, address: str, name: str = None):
+        super().__init__(address, name, insType.visa)
     def insInit(self):
         self.res.baud_rate = 9600
         self.res.parity = visa.constants.Parity(1)
@@ -22,6 +22,12 @@ class EastChangingP7050(insVisa, MagnetController):
             time.sleep(60)
     def stop(self):
         self.res.write(":FIELD 0\n")
+    # get & check
+    def getNow(self):
+        self.now['H(Oe)'] = float(self.res.query(":FIELD?\n"))*1e3
+    def reach(self, flag = waitFlag.stable):
+        return super().reach(flag)
+    # show & record
     def flag2str(self) -> str:
         return super().flag2str()
     def setpoint2str(self) -> str:
@@ -39,9 +45,7 @@ class EastChangingP7050(insVisa, MagnetController):
             return f"{self.now['H(Oe)']:>+7.2f}"
         else:
             return super().now2record()
-    # insBG method
-    def getNow(self):
-        self.now['H(Oe)'] = float(self.res.query(":FIELD?\n"))*1e3
+    # set
     def setField(self, field: float, rate: float):
         '''field in Oe'''
         self.res.write(f":FIELD {field/1e3:+7.4f}\n")

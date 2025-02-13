@@ -1,5 +1,5 @@
-from .ins import insVisa
-from .insBG import TempController
+from .insEnum import *
+from .ins import TempController
 import pyvisa as visa
 from enum import IntEnum
 
@@ -8,21 +8,28 @@ class CH(IntEnum):
     HC = 1 # Heat and Cool
     CO = 2 # Cool Only
 
-class InstecMK2000B(insVisa, TempController):
-    def __init__(self, address: str, name: str = "InstecMK2000B"):
-        insVisa.__init__(self, address, name)
-        TempController.__init__(self)
-        self.flag = {'CH': None} # CH in build
-        self.now['power(%)'] = None
+class InstecMK2000B(TempController):
+    def __data__(self):
+        super().__data__()
+        self.flag = {'CH': None}
+        self.now = {'T(K)': None, 'power(%)': None}
         self.CHStr = ["Heat Only", "Heat&Cool", "Cool Only"]
         self.error = 0.1
-    # ins method
+    def __init__(self, address: str, name: str = "InstecMK2000B"):
+        super().__init__(address, name, insType.visa)
     def insInit(self):
         self.res.write_termination = ""
         self.res.read_termination = "\r\n"
         self.flag['CH'] = int(self.res.query("TEMP:CHSW?\n"))
     def stop(self):
         self.res.write("TEMP:STOP\n")
+    # get & check
+    def getNow(self):
+        self.now['T(K)'] = float(self.res.query("TEMP:RTIN?\n").split(":")[2])+273.15
+        self.now['power(%)'] = float(self.res.query("TEMP:POW?\n"))*100
+    def reach(self, flag = waitFlag.stable):
+        return super().reach(flag)
+    # show & record
     def flag2str(self) -> str:
         return f"{self.CHStr[self.flag['CH']]:>20s}"
     def setpoint2str(self) -> str:
@@ -37,14 +44,11 @@ class InstecMK2000B(insVisa, TempController):
             return f"{self.now['T(K)']:>6.3f},{self.now['power(%)']:>6.3f}"
         else:
             return super().now2record()
-    # insBG method
-    def getNow(self):
-        self.now['T(K)'] = float(self.res.query("TEMP:RTIN?\n").split(":")[2])+273.15
-        self.now['power(%)'] = float(self.res.query("TEMP:POW?\n"))*100
-    def setCH(self, flag: CH):
-        self.res.write(f"TEMP:CHSW {flag:d}\n")
-        self.flag['CH'] = flag
+    # set
     def setTemp(self, setpoint: float, rate: float):
         self.res.write(f"TEMP:RAMP {setpoint-273.15:f},{rate:f}\n")
         self.setpoint['setpoint'] = setpoint
         self.setpoint['rate'] = abs(rate)
+    def setCH(self, flag: CH):
+        self.res.write(f"TEMP:CHSW {flag:d}\n")
+        self.flag['CH'] = flag

@@ -2,7 +2,6 @@ import time, threading, sys, os, copy
 from typing import List, Union
 import pyvisa as visa
 from .instruments.ins import ins
-from .instruments.insBG import insBG
 from .instruments.insEnum import insType, waitFlag
 
 def checkFile(name: str):
@@ -39,7 +38,7 @@ class exp():
             self.f = None
         else:
             if dataFile == "":
-                dataFile = "data"+time.strftime("%Y%m%d_%H%M%S", time.localtime())+".dat"
+                dataFile = "data"+time.strftime("%Y%m%d_%H%M%S", time.localtime(self.__t0))+".dat"
             else:
                 dataFile = checkFile(dataFile+".dat")
             self.f = open(dataFile, "w")
@@ -67,7 +66,18 @@ class exp():
                 fHeader += f",{ins.name}_{key}"
         print(f"{nameStr}\n\n\n\n", end="")
         if self.f != None:
-            self.f.write(fHeader+"\n")
+            self.f.write("\n".join([
+                f"[Header]",
+                f"Time Stamp: {self.__t:f}",
+                f"Time: {time.strftime('%Y/%m/%d %H:%M:%S', time.localtime(self.__t0))}",
+                f"Instruments: {', '.join([ins.name for ins in self.instruments.keys()])}",
+                f"Instrument Address: {', '.join([ins.address for ins in self.instruments.keys()])}",
+                f"Instrument Type: {', '.join([type(ins).__name__ for ins in self.instruments.keys()])}",
+                ""]))
+            self.f.write("\n".join([
+                "[Data]",
+                fHeader,
+                ""]))
             self.f.flush()
             self.logWrite(f"Save to {self.f.name}")
         else:
@@ -126,6 +136,7 @@ class exp():
         printStr = f"{flagStr}\n{setpointStr}\n{nowStr} {f'{self.__t-self.__t0:>.2f}s':<20s}\n"
         print(printStr, end="")
     def setRequired(self, ins: ins, required: bool):
+        '''set whether the instrument is required to record'''
         self.instruments[ins][0] = required
     def record(self, comment: str = ""):
         '''record the current states of the instruments'''
@@ -140,7 +151,7 @@ class exp():
                 self.f.write(len(ins.now)*",")
         self.f.write("\n")
         self.f.flush()
-    def wait(self, t: float, inss: List[insBG] = [], flags: List[waitFlag] = []):
+    def wait(self, t: float, inss: List[ins] = [], flags: List[waitFlag] = []):
         '''wait t (seconds) after all instruments reach their setpoints/targets'''
         self.__flag = "Wait for "+" ".join([ins.name for ins in inss])
         reached = len(inss)*[False]
@@ -153,9 +164,7 @@ class exp():
                     reached[i] = inss[i].reach()
             else:
                 for i in range(len(inss)):
-                    if flags[i] == waitFlag.none:
-                        reached[i] = True
-                    elif flags[i] == waitFlag.stable or not isinstance(flags[i], waitFlag):
+                    if flags[i] == waitFlag.stable:
                         reached[i] = inss[i].reach(flags[i])
                     else:
                         reached[i] = reached[i] or inss[i].reach(flags[i])
