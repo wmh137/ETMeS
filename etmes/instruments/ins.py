@@ -1,6 +1,7 @@
 from .insEnum import insType, waitFlag
-from typing import Union
+from typing import Union, List
 from abc import ABC, abstractmethod
+import pyvisa as visa
 
 class ins(ABC):
     '''
@@ -27,7 +28,10 @@ class ins(ABC):
         else:
             self.name = address
         self.type = type
-        self.res = None # resource
+        if type == insType.visa:
+            self.res = visa.ResourceManager("@sim").open_resource("")
+        else:
+            self.res = None
         self.ONOFF = ["OFF", "ON"]
         self.log = ""
         self.__data__()
@@ -58,7 +62,7 @@ class ins(ABC):
         pass
     @abstractmethod
     def reach(self, flag: waitFlag = waitFlag.stable) -> bool:
-        pass
+        return True
     # show & record
     def name2str(self) -> str:
         return f"{self.name:>20s}"
@@ -72,8 +76,8 @@ class ins(ABC):
     def now2str(self) -> str:
         return 20*" "
     @abstractmethod
-    def now2record(self) -> str:
-        return (len(self.now)-1)*","
+    def now2record(self) -> List[str]:
+        return [""]*len(self.now)
 
 class SMU(ins):
     # set
@@ -90,6 +94,7 @@ class TempController(ins):
         self.error = None
     @abstractmethod
     def reach(self, flag: waitFlag = waitFlag.stable) -> bool:
+        flag = waitFlag(flag)
         if self.targetpoint == None:
             targetTemp = self.setpoint['setpoint']
         else:
@@ -116,6 +121,7 @@ class MagnetController(ins):
         self.error = None
     @abstractmethod
     def reach(self, flag: waitFlag = waitFlag.stable) -> bool:
+        flag = waitFlag(flag)
         if flag == waitFlag.stable:
             return abs(self.now['H(Oe)'] - self.setpoint['setpoint']) < self.error
         else:

@@ -17,17 +17,7 @@ class Keithley2400(SMU):
         self.res.write_termination = ""
         self.res.read_termination = "\n"
         self.res.write(":SENS:FUNC:CONC ON\n:FORM:ELEM VOLT,CURR\n")
-        self.flag['output'] = bool(int(self.res.query(":OUTP?\n")))
-        self.flag['rsen'] = bool(int(self.res.query(":SYST:RSEN?\n")))
-        self.flag['panel'] = False if self.res.query(":ROUT:TERM?\n") == "FRON" else True
-        sourFunc = self.res.query(":SOUR:FUNC?")
-        if sourFunc == "VOLT":
-            self.setpoint['VI'] = SM.V
-        elif sourFunc == "CURR":
-            self.setpoint['VI'] = SM.I
-        self.setpoint['source'] = float(self.res.query(f":SOUR:{self.VI[self.setpoint['VI']]}:LEV?\n"))
-        self.flag['senrange'] = float(self.res.query(f":SENS:{self.VI[(self.setpoint['VI']+1)%2]}:RANG?\n"))
-        self.flag['cmpl'] = float(self.res.query(f":SENS:{self.VI[(self.setpoint['VI']+1)%2]}:PROT?\n"))
+        self.__getFlagSetpoint__()
     def stop(self):
         self.res.write("OUTP 0\n")
         self.flag['output'] = False
@@ -57,7 +47,7 @@ class Keithley2400(SMU):
             return 20*" "
     def now2record(self) -> str:
         if not ((self.now['V(V)'] == None) | (self.now['I(A)'] == None)):
-            return f"{self.now['V(V)']:>9e},{self.now['I(A)']:>9e}"
+            return [f"{self.now['V(V)']:>.6e}", f"{self.now['I(A)']:>.6e}"]
         else:
             return super().now2record()
     # set
@@ -73,15 +63,31 @@ class Keithley2400(SMU):
             self.flag['output'] = False
             self.flag['panel'] = flag
     def setSMU(self, srcFlag: SM, cmpl: float):
+        srcFlag = SM(srcFlag)
         meas = (srcFlag + 1) % 2
         self.res.write(f":SOUR:FUNC {self.VI[srcFlag]}\n:SOUR:{self.VI[srcFlag]}:MODE FIX\n:SENS:FUNC \"{self.VI[meas]}\"\n")
+        self.setpoint['VI'] = srcFlag
+        self.flag['output'] = False
+        self.flag['senrange'] = float(self.res.query(f":SENS:{self.VI[(self.setpoint['VI']+1)%2]}:RANG?\n"))
         if cmpl < self.flag['senrange']:
             self.res.write(f":SENS:{self.VI[meas]}:RANG {cmpl:f}\n:SENS:{self.VI[meas]}:PROT {cmpl:f}\n")
         else:
             self.res.write(f":SENS:{self.VI[meas]}:PROT {cmpl:f}\n:SENS:{self.VI[meas]}:RANG {cmpl:f}\n")
-        self.setpoint['VI'] = srcFlag
         self.flag['senrange'] = float(self.res.query(f":SENS:{self.VI[meas]}:RANG?\n"))
         self.flag['cmpl'] = cmpl
     def setOutput(self, flag: bool):
         self.res.write(f"OUTP {flag:d}\n")
         self.flag['output'] = flag
+    # others
+    def __getFlagSetpoint__(self):
+        self.flag['output'] = bool(int(self.res.query(":OUTP?\n")))
+        self.flag['rsen'] = bool(int(self.res.query(":SYST:RSEN?\n")))
+        self.flag['panel'] = False if self.res.query(":ROUT:TERM?\n") == "FRON" else True
+        sourFunc = self.res.query(":SOUR:FUNC?")
+        if sourFunc == "VOLT":
+            self.setpoint['VI'] = SM.V
+        elif sourFunc == "CURR":
+            self.setpoint['VI'] = SM.I
+        self.setpoint['source'] = float(self.res.query(f":SOUR:{self.VI[self.setpoint['VI']]}:LEV?\n"))
+        self.flag['senrange'] = float(self.res.query(f":SENS:{self.VI[(self.setpoint['VI']+1)%2]}:RANG?\n"))
+        self.flag['cmpl'] = float(self.res.query(f":SENS:{self.VI[(self.setpoint['VI']+1)%2]}:PROT?\n"))

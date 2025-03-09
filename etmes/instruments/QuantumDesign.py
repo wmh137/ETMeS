@@ -7,6 +7,15 @@ clr.AddReference("etmes/instruments/QDInstrument")
 
 from QuantumDesign.QDInstrument import QDInstrumentBase, QDInstrumentFactory
 
+class QDTempApproach(eEnum):
+    FastSettle = QDInstrumentBase.TemperatureApproach.FastSettle
+    NoOvershoot = QDInstrumentBase.TemperatureApproach.NoOvershoot
+
+class QDFieldApproach(eEnum):
+    Linear = QDInstrumentBase.FieldApproach.Linear
+    NoOvershoot = QDInstrumentBase.FieldApproach.NoOvershoot
+    Oscillate = QDInstrumentBase.FieldApproach.Oscillate
+
 class QDTempController(TempController):
     def __data__(self):
         super().__data__()
@@ -14,13 +23,13 @@ class QDTempController(TempController):
     def __init__(self, qd: ins):
         super().__init__("", qd.name + ".T")
         self.res = qd.res
-    def setTemp(self, setpoint: float, rate: float, approach: QDInstrumentBase.TemperatureApproach = QDInstrumentBase.TemperatureApproach.FastSettle):
-        self.res.SetTemperature(setpoint, rate, approach)
-        self.setpoint['setpoint'] = [setpoint, approach]
-        self.setpoint['rate'] = rate
+    def stop(self):
+        pass
+    # get & check
     def getNow(self):
         self.now['T(K)'] = self.res.GetTemperature(0, QDInstrumentBase.TemperatureStatus(0))
     def reach(self, flag: waitFlag = waitFlag.stable):
+        flag = waitFlag(flag)
         if self.targetpoint == None:
             targetTemp = self.setpoint['setpoint']
         else:
@@ -32,6 +41,38 @@ class QDTempController(TempController):
                 return flag * (targetTemp - self.now['T(K)']) < self.error
         else:
             return True
+    # show & record
+    def flag2str(self) -> str:
+        if self.setpoint['rate'] is not None:
+            return f"{self.setpoint['rate']:>5.1f}K/min "
+        else:
+            return 11*" "
+    def setpoint2str(self) -> str:
+        if self.setpoint['setpoint'] is not None:
+            return f"{self.setpoint['setpoint'][0]:>5.1f}K {self.setpoint['setpoint'][1].ToString():.4s}"
+        else:
+            return 11*" "
+    def now2str(self) -> str:
+        if self.now['T(K)'] is not None:
+            if self.now['T(K)'][1] >= 99.9:
+                s = f"{self.now['T(K)'][1]:>5.1f}K"
+            elif self.now['T(K)'][1] >= 9.99:
+                s = f"{self.now['T(K)'][1]:>5.2f}K"
+            elif self.now['T(K)'][1] >= 0.999:
+                s = f"{self.now['T(K)'][1]:>5.3f}K"
+            else:
+                s = f"{self.now['T(K)'][1]*1000:>4.0f}mK"
+            return s + f" {self.res.TemperatureStatusString(self.now['T(K)'][2]):>.4s}"
+        else:
+            return 11*" "
+    def now2record(self):
+        pass
+    # set
+    def setTemp(self, setpoint: float, rate: float, approach: QDTempApproach = QDTempApproach.FastSettle):
+        approach = QDTempApproach(approach)
+        self.res.SetTemperature(setpoint, rate, approach)
+        self.setpoint['setpoint'] = [setpoint, approach]
+        self.setpoint['rate'] = rate
 
 class QDMagnetController(MagnetController):
     def __data__(self):
@@ -40,17 +81,41 @@ class QDMagnetController(MagnetController):
     def __init__(self, qd:ins):
         super().__init__("", qd.name + ".M")
         self.res = qd.res
-    def setField(self, setpoint: float, rate: float, approach: QDInstrumentBase.FieldApproach = QDInstrumentBase.FieldApproach.Linear):
-        self.res.SetField(setpoint, rate, approach, QDInstrumentBase.FieldMode.Persistent)
-        self.setpoint['setpoint'] = [setpoint, approach]
-        self.setpoint['rate'] = rate
+    def stop(self):
+        pass
+    # get & check
     def getNow(self):
         self.now['H(Oe)'] = self.res.GetField(0, QDInstrumentBase.FieldStatus(0))
     def reach(self, flag: waitFlag = waitFlag.stable) -> bool:
+        flag = waitFlag(flag)
         if flag == waitFlag.stable:
             return int(self.now['H(Oe)'][2]) in [1, 4]
         else:
             return (self.setpoint['setpoint'] - self.now['H(Oe)']) * flag < self.error
+    # show & record
+    def flag2str(self) -> str:
+        if self.setpoint['rate'] is not None:
+            return f"{self.setpoint['rate']:>7.0f}Oe/s   "
+        else:
+            return 14*" "
+    def setpoint2str(self) -> str:
+        if self.setpoint['setpoint'] is not None:
+            return f"{self.setpoint['setpoint'][0]:>+7.0f}Oe {self.setpoint['setpoint'][1].ToString():.4s}"
+        else:
+            return 14*" "
+    def now2str(self) -> str:
+        if self.now['H(Oe)'] is not None:
+            return f"{self.now['H(Oe)'][1]:>+7.0f}Oe {self.res.FieldStatusString(self.now['H(Oe)'][2]):>.4s}"
+        else:
+            return 14*" "
+    def now2record(self):
+        pass
+    # set
+    def setField(self, setpoint: float, rate: float, approach: QDFieldApproach = QDFieldApproach.Linear):
+        approach = QDFieldApproach(approach)
+        self.res.SetField(setpoint, rate, approach, QDInstrumentBase.FieldMode.Persistent)
+        self.setpoint['setpoint'] = [setpoint, approach]
+        self.setpoint['rate'] = rate
 
 class QDRotator(ins):
     def __data__(self):
@@ -61,17 +126,40 @@ class QDRotator(ins):
     def __init__(self, qd:ins):
         super().__init__("", qd.name + ".R")
         self.res = qd.res
-    def setPosition(self, setpoint: float, rate: float, mode: QDInstrumentBase.PositionMode = QDInstrumentBase.PositionMode.MoveToPosition):
-        self.res.SetPosition("Horizontal Rotator", setpoint, rate, mode)
-        self.setpoint['setpoint'] = [setpoint]
-        self.setpoint['rate'] = rate
+    def stop(self):
+        pass
+    # get & check
     def getNow(self):
         self.now['Pos(deg)'] = self.res.GetPosition("Horizontal Rotator", 0, QDInstrumentBase.PositionStatus(0))
     def reach(self, flag: waitFlag = waitFlag.stable) -> bool:
+        flag = waitFlag(flag)
         if flag == waitFlag.stable:
             return int(self.now['Pos(deg)'][2]) in [1]
         else:
             return (self.setpoint['setpoint'] - self.now['Pos(deg)']) * flag < self.error
+    # show & record
+    def flag2str(self) -> str:
+        if self.setpoint['rate'] is not None:
+            return f"{self.setpoint['rate']:>5.1f}Dg/s    "
+        else:
+            return 13*" "
+    def setpoint2str(self) -> str:
+        if self.setpoint['setpoint'] is not None:
+            return f"{self.setpoint['setpoint'][0]:>5.1f}Dg      "
+        else:
+            return 13*" "
+    def now2str(self) -> str:
+        if self.now['Pos(deg)'] is not None:
+            return f"{self.now['Pos(deg)'][1]:>5.1f}Dg"
+        else:
+            return 7*" "
+    def now2record(self):
+        pass
+    # set
+    def setPosition(self, setpoint: float, rate: float, mode: QDInstrumentBase.PositionMode = QDInstrumentBase.PositionMode.MoveToPosition):
+        self.res.SetPosition("Horizontal Rotator", setpoint, rate, mode)
+        self.setpoint['setpoint'] = [setpoint]
+        self.setpoint['rate'] = rate
 
 class QDChamber(ins):
     def __data__(self):
@@ -81,13 +169,29 @@ class QDChamber(ins):
     def __init__(self, qd:ins):
         super().__init__("", qd.name + ".C")
         self.res = qd.res
-    def setChamber(self, command: QDInstrumentBase.ChamberCommand):
-        self.res.SetChamber(command)
-        self.setpoint['setpoint'] = command
+    def stop(self):
+        pass
+    # get & check
     def getNow(self):
         self.now['Chamber'] = self.res.GetChamber(QDInstrumentBase.ChamberStatus(0))
     def reach(self, flag: waitFlag = waitFlag.stable) -> bool:
         return int(self.now['Chamber'][1]) in [1, 2, 3, 7, 8, 9]
+    # show & record
+    def flag2str(self) -> str:
+        pass
+    def setpoint2str(self) -> str:
+        pass
+    def now2str(self) -> str:
+        if self.now['Chamber'] is not None:
+            return f"{self.res.ChamberStatusString(self.now['Chamber'][1]):>.5s}"
+        else:
+            return 5*" "
+    def now2record(self):
+        pass
+    # set
+    def setChamber(self, command: QDInstrumentBase.ChamberCommand):
+        self.res.SetChamber(command)
+        self.setpoint['setpoint'] = command
 
 class QuantumDesign(ins):
     def __data__(self):
@@ -117,7 +221,10 @@ class QuantumDesign(ins):
     def getNow(self):
         self.T.getNow()
         self.M.getNow()
-        self.R.getNow()
+        try:
+            self.R.getNow()
+        except:
+            self.R.now['Pos(deg)'] = [0,0.,1]
         self.C.getNow()
         self.now = {**self.T.now, **self.M.now, **self.R.now, **self.C.now}
     def reach(self, flag: waitFlag = waitFlag.stable):
@@ -126,76 +233,25 @@ class QuantumDesign(ins):
     def name2str(self) -> str:
         return f"{self.name:>40s}"
     def flag2str(self) -> str:
-        s = ""
-        if self.T.setpoint['rate'] is not None:
-            s += f"{self.T.setpoint['rate']:>5.1f}K/min |"
-        else:
-            s += 12*" "
-        if self.M.setpoint['rate'] is not None:
-            s += f"{self.M.setpoint['rate']:>7.0f}Oe/s   |"
-        else:
-            s += 15*" "
-        if self.R.setpoint['rate'] is not None:
-            s += f"{self.R.setpoint['rate']:>5.1f}Dg/s    "
-        else:
-            s += 13*" "
+        s = "|".join([self.T.flag2str(), self.M.flag2str(), self.R.flag2str()])
         return s
     def setpoint2str(self) -> str:
-        s = ""
-        if self.T.setpoint['setpoint'] is not None:
-            s += f"{self.T.setpoint['setpoint'][0]:>5.1f}K {self.T.setpoint['setpoint'][1].ToString():.4s}|"
-        else:
-            s += 12*" "
-        if self.M.setpoint['setpoint'] is not None:
-            s += f"{self.M.setpoint['setpoint'][0]:>+7.0f}Oe {self.M.setpoint['setpoint'][1].ToString():.4s}|"
-        else:
-            s += 15*" "
-        if self.R.setpoint['setpoint'] is not None:
-            s += f"{self.R.setpoint['setpoint'][0]:>5.1f}Dg      "
-        else:
-            s += 13*" "
+        s = "|".join([self.T.setpoint2str(), self.M.setpoint2str(), self.R.setpoint2str()])
         return s
     def now2str(self) -> str:
-        s = ""
-        if self.T.now['T(K)'] is not None:
-            if self.T.now['T(K)'][1] >= 99.9:
-                s += f"{self.T.now['T(K)'][1]:>5.1f}K"
-            elif self.T.now['T(K)'][1] >= 9.99:
-                s += f"{self.T.now['T(K)'][1]:>5.2f}K"
-            elif self.T.now['T(K)'][1] >= 0.999:
-                s += f"{self.T.now['T(K)'][1]:>5.3f}K"
-            else:
-                s += f"{self.T.now['T(K)'][1]*1000:>4.0f}mK"
-            s += f" {self.res.TemperatureStatusString(self.T.now['T(K)'][2]):>.4s}|"
-        else:
-            s += 12*" "
-        if self.M.now['H(Oe)'] is not None:
-            s += f"{self.M.now['H(Oe)'][1]:>+7.0f}Oe {self.res.FieldStatusString(self.M.now['H(Oe)'][2]):>.4s}|"
-        else:
-            s += 15*" "
-        if self.R.now['Pos(deg)'] is not None:
-            s += f"{self.R.now['Pos(deg)'][1]:>5.1f}Dg|"
-        else:
-            s += 8*" "
-        if self.C.now['Chamber'] is not None:
-            s += f"{self.res.ChamberStatusString(self.C.now['Chamber'][1]):>.5s}"
-        else:
-            s += 5*" "
+        s = "|".join([self.T.now2str(), self.M.now2str(), self.R.now2str(), self.C.now2str()])
         return s
     def now2record(self) -> str:
-        rstr = ""
+        r = []
         if self.T.now['T(K)'] is not None:
-            rstr += f"{self.T.now['T(K)'][1]:>.5f}"
-        rstr += ","
+            r.append(f"{self.T.now['T(K)'][1]:>.5f}")
         if self.M.now['H(Oe)'] is not None:
-            rstr += f"{self.M.now['H(Oe)'][1]:>.3f}"
-        rstr += ","
+            r.append(f"{self.M.now['H(Oe)'][1]:>.3f}")
         if self.R.now['Pos(deg)'] is not None:
-            rstr += f"{self.R.now['Pos(deg)'][1]:>.3f}"
-        rstr += ","
+            r.append(f"{self.R.now['Pos(deg)'][1]:>.3f}")
         if self.C.now['Chamber'] is not None:
-            rstr += f"{self.res.ChamberStatusString(self.C.now['Chamber'][1])}"
-        return rstr
+            r.append(f"{self.res.ChamberStatusString(self.C.now['Chamber'][1])}")
+        return r
     # set
     def setTemp(self, setpoint: float, rate: float, approach: QDInstrumentBase.TemperatureApproach = QDInstrumentBase.TemperatureApproach.FastSettle):
         self.T.setTemp(setpoint, rate, approach)

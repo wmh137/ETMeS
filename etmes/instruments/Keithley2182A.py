@@ -21,7 +21,7 @@ class Keithley2182A(ins):
     def getNow(self):
         self.now['V(V)'] = float(self.res.query(":READ?\n"))
     def reach(self, flag: waitFlag = waitFlag.stable) -> bool:
-        pass
+        return super().reach(flag)
     # show & record
     def flag2str(self) -> str:
         return f"{self.channel[self.flag['channel']-1]:>20s}"
@@ -34,7 +34,7 @@ class Keithley2182A(ins):
             return 20*" "
     def now2record(self) -> str:
         if not ((self.now['V(V)'] == None)):
-            return f"{self.now['V(V)']:>9e}"
+            return [f"{self.now['V(V)']:>.8e}"]
         else:
             return super().now2record()
     # set

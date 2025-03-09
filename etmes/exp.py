@@ -26,7 +26,10 @@ class exp():
             name of data file without extensition name
     '''
     def __init__(self, instruments: List[ins], dataFile: Union[str, None]="", debug: bool=False):
-        self.__rm = {'visa': visa.ResourceManager()}
+        if not debug:
+            self.__rm = {'visa': visa.ResourceManager()}
+        else:
+            self.__rm = {'visa': visa.ResourceManager("@sim")}
         for ins in instruments:
             self.__addIns(ins)
         self.instruments = dict(zip(instruments, [copy.deepcopy([True, 20]) for i in range(len(instruments))])) # {ins: [required(bool), displaywidth(int)]}
@@ -113,6 +116,7 @@ class exp():
         flagStr = 6*" "+"Flag|"
         setpointStr = 2*" "+"Setpoint|"
         nowStr = 7*" "+"Now|"
+        self.__refreshNow()
         for ins, value in self.instruments.items():
             if value[0]:
                 fStr = ins.flag2str()
@@ -122,7 +126,6 @@ class exp():
             setpointStr += ins.setpoint2str()+"|"
         flagStr += f" {self.__flag:<20s}"
         setpointStr += f" {self.__setpoint:<20s}"
-        self.__refreshNow()
         for ins, value in self.instruments.items():
             if value[0]:
                 nStr = ins.now2str()
@@ -146,7 +149,7 @@ class exp():
         self.f.write(f"{comment},{self.__t:.3f}")
         for ins, value in self.instruments.items():
             if value[0]:
-                self.f.write(f",{ins.now2record()}")
+                self.f.write(","+",".join(ins.now2record()))
             else:
                 self.f.write(len(ins.now)*",")
         self.f.write("\n")

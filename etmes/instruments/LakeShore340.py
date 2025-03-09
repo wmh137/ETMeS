@@ -39,7 +39,7 @@ class LakeShore340(TempController):
         return f"{self.now['T(K)']:>9.2f}K{self.now['power(%)']:>9.1f}%"
     def now2record(self) -> str:
         if (self.now['T(K)'] != None) and (self.now['power(%)'] != None):
-            return f"{self.now['T(K)']:>6.3f},{self.now['power(%)']:>6.3f}"
+            return [f"{self.now['T(K)']:>6.3f}", f"{self.now['power(%)']:>6.3f}"]
         else:
             return super().now2record()
     # set

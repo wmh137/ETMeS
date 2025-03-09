@@ -3,7 +3,7 @@ from .ins import TempController
 import pyvisa as visa
 from enum import IntEnum
 
-class CH(IntEnum):
+class CH(Enum):
     HO = 0 # Heat Only
     HC = 1 # Heat and Cool
     CO = 2 # Cool Only
@@ -21,6 +21,8 @@ class InstecMK2000B(TempController):
         self.res.write_termination = ""
         self.res.read_termination = "\r\n"
         self.flag['CH'] = int(self.res.query("TEMP:CHSW?\n"))
+        self.setpoint['setpoint'] = float(self.res.query("TEMP:SPO?\n"))+273.15
+        self.setpoint['rate'] = float(self.res.query("TEMP:RAT?\n"))
     def stop(self):
         self.res.write("TEMP:STOP\n")
     # get & check
@@ -39,11 +41,11 @@ class InstecMK2000B(TempController):
             return 20*" "
     def now2str(self) -> str:
         return f"{self.now['T(K)']:>9.3f}K{self.now['power(%)']:>+9.1f}%"
-    def now2record(self) -> str:
-        if (self.now['T(K)'] != None) and (self.now['power(%)'] != None):
-            return f"{self.now['T(K)']:>6.3f},{self.now['power(%)']:>6.3f}"
-        else:
-            return super().now2record()
+    def now2record(self):
+        r = []
+        r.append(f"{self.now['T(K)']:>.3f}" if self.now['T(K)'] is not None else "")
+        r.append(f"{self.now['power(%)']:>.3f}" if self.now['power(%)'] is not None else "")
+        return r
     # set
     def setTemp(self, setpoint: float, rate: float):
         self.res.write(f"TEMP:RAMP {setpoint-273.15:f},{rate:f}\n")
