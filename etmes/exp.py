@@ -35,7 +35,7 @@ class exp():
         self.instruments = dict(zip(instruments, [copy.deepcopy([True, 20]) for i in range(len(instruments))])) # {ins: [required(bool), displaywidth(int)]}
         self.__t0 = time.time()
         self.__t = time.time()
-        self.__interval = 0.3
+        self.__interval = 0.2
         self.__log = open(".log", "a")
         if dataFile == None:
             self.f = None

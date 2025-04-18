@@ -3,7 +3,7 @@ from .ins import TempController
 import pyvisa as visa
 from enum import IntEnum
 
-class CH(Enum):
+class CH(eEnum):
     HO = 0 # Heat Only
     HC = 1 # Heat and Cool
     CO = 2 # Cool Only
@@ -33,7 +33,7 @@ class InstecMK2000B(TempController):
         return super().reach(flag)
     # show & record
     def flag2str(self) -> str:
-        return f"{self.CHStr[self.flag['CH']]:>20s}"
+        return f"{self.CHStr[self.flag['CH'].value]:>20s}"
     def setpoint2str(self) -> str:
         if (self.setpoint['setpoint'] != None) and (self.setpoint['rate'] != None):
             return f"{self.setpoint['setpoint']:>9.3f}K{self.setpoint['rate']:>7.2f}K/m"
@@ -52,5 +52,5 @@ class InstecMK2000B(TempController):
         self.setpoint['setpoint'] = setpoint
         self.setpoint['rate'] = abs(rate)
     def setCH(self, flag: CH):
-        self.res.write(f"TEMP:CHSW {flag:d}\n")
+        self.res.write(f"TEMP:CHSW {flag.value:d}\n")
         self.flag['CH'] = flag

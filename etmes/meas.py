@@ -42,8 +42,9 @@ class meas():
             time.sleep(delay)
             self.__exp.refresh()
             self.__exp.record()
-        if pulse:
-            SMU.setSrc(0)
+            if pulse:
+                SMU.setSrc(0)
+                time.sleep(delay)
         self.__exp.setFlag("")
     def scanTemp(self, Tstart: float, Tstop: float, Tstep: float, Trate: float, Temp: TempController, func: Callable, sf: scanFlag = scanFlag.sweep):
         '''
@@ -76,10 +77,10 @@ class meas():
         if sf == scanFlag.settle:
             for i in range(n):
                 Temp.setTemp(Tstart+i*Tstep, Trate)
-                self.__exp.wait(10, [Temp], [wf])
+                self.__exp.wait(10, [Temp], [waitFlag.stable])
                 func()
             Temp.setTemp(Tstop, Trate)
-            self.__exp.wait(10, [Temp], [wf])
+            self.__exp.wait(10, [Temp], [waitFlag.stable])
             func()
         elif sf == scanFlag.sweep:
             if Tstop>Tstart:

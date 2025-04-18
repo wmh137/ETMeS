@@ -28,10 +28,7 @@ class ins(ABC):
         else:
             self.name = address
         self.type = type
-        if type == insType.visa:
-            self.res = visa.ResourceManager("@sim").open_resource("")
-        else:
-            self.res = None
+        self.res = None
         self.ONOFF = ["OFF", "ON"]
         self.log = ""
         self.__data__()

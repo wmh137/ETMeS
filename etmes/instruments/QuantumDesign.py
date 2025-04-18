@@ -1,6 +1,6 @@
 from .insEnum import *
 from .ins import ins, TempController, MagnetController
-import clr
+import clr, time
 from abc import abstractmethod
 
 clr.AddReference("etmes/instruments/QDInstrument")
@@ -49,7 +49,7 @@ class QDTempController(TempController):
             return 11*" "
     def setpoint2str(self) -> str:
         if self.setpoint['setpoint'] is not None:
-            return f"{self.setpoint['setpoint'][0]:>5.1f}K {self.setpoint['setpoint'][1].ToString():.4s}"
+            return f"{self.setpoint['setpoint'][0]:>5.1f}K {self.setpoint['setpoint'][1].value.ToString():.4s}"
         else:
             return 11*" "
     def now2str(self) -> str:
@@ -70,7 +70,7 @@ class QDTempController(TempController):
     # set
     def setTemp(self, setpoint: float, rate: float, approach: QDTempApproach = QDTempApproach.FastSettle):
         approach = QDTempApproach(approach)
-        self.res.SetTemperature(setpoint, rate, approach)
+        self.res.SetTemperature(setpoint, rate, approach.value)
         self.setpoint['setpoint'] = [setpoint, approach]
         self.setpoint['rate'] = rate
 
@@ -100,7 +100,7 @@ class QDMagnetController(MagnetController):
             return 14*" "
     def setpoint2str(self) -> str:
         if self.setpoint['setpoint'] is not None:
-            return f"{self.setpoint['setpoint'][0]:>+7.0f}Oe {self.setpoint['setpoint'][1].ToString():.4s}"
+            return f"{self.setpoint['setpoint'][0]:>+7.0f}Oe {self.setpoint['setpoint'][1].value.ToString():.4s}"
         else:
             return 14*" "
     def now2str(self) -> str:
@@ -113,7 +113,7 @@ class QDMagnetController(MagnetController):
     # set
     def setField(self, setpoint: float, rate: float, approach: QDFieldApproach = QDFieldApproach.Linear):
         approach = QDFieldApproach(approach)
-        self.res.SetField(setpoint, rate, approach, QDInstrumentBase.FieldMode.Persistent)
+        self.res.SetField(setpoint, rate, approach.value, QDInstrumentBase.FieldMode.Persistent)
         self.setpoint['setpoint'] = [setpoint, approach]
         self.setpoint['rate'] = rate
 
@@ -201,6 +201,7 @@ class QuantumDesign(ins):
         self.R = None
         self.C = None
         self.now = {}
+        self.__lastgetNowTime = 0.0
     @abstractmethod
     def __init__(self, type: QDInstrumentBase.QDInstrumentType, address: str, name: str, port: int):
         super().__init__(address, name, insType.other)
@@ -219,6 +220,9 @@ class QuantumDesign(ins):
         pass
     # get & check
     def getNow(self):
+        if time.time() - self.__lastgetNowTime < 0.4:
+            return
+        self.__lastgetNowTime = time.time()
         self.T.getNow()
         self.M.getNow()
         try:
@@ -253,9 +257,9 @@ class QuantumDesign(ins):
             r.append(f"{self.res.ChamberStatusString(self.C.now['Chamber'][1])}")
         return r
     # set
-    def setTemp(self, setpoint: float, rate: float, approach: QDInstrumentBase.TemperatureApproach = QDInstrumentBase.TemperatureApproach.FastSettle):
+    def setTemp(self, setpoint: float, rate: float, approach: QDTempApproach = QDTempApproach.FastSettle):
         self.T.setTemp(setpoint, rate, approach)
-    def setField(self, setpoint: float, rate: float, approach: QDInstrumentBase.FieldApproach = QDInstrumentBase.FieldApproach.Linear):
+    def setField(self, setpoint: float, rate: float, approach: QDFieldApproach = QDFieldApproach.Linear):
         self.M.setField(setpoint, rate, approach)
     def setPosition(self, setpoint: float, rate: float, mode: QDInstrumentBase.PositionMode = QDInstrumentBase.PositionMode.MoveToPosition):
         self.R.setPosition(setpoint, rate, mode)

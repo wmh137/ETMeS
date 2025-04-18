@@ -59,7 +59,7 @@ class Keithley2400(SMU):
         self.flag['rsen'] = flag
     def setPanel(self, flag: bool):
         if flag != self.flag['panel']:
-            self.res.write(f":ROUT:TERM {self.panel[self.flag['panel']]}\n")
+            self.res.write(f":ROUT:TERM {self.panel[flag]}\n")
             self.flag['output'] = False
             self.flag['panel'] = flag
     def setSMU(self, srcFlag: SM, cmpl: float):
