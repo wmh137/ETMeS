@@ -41,5 +41,5 @@ class Keithley2182A(ins):
     def setChannel(self, flag: int):
         self.res.write(f":SENS:CHAN {flag:d}\n:SENS:VOLT:RANG:AUTO ON\n")
         self.flag['channel'] = flag
-    def setNPLC(self, n: int):
+    def setNPLC(self, n: float):
         self.res.write(f":SENS:VOLT:NPLC {n:f}\n")

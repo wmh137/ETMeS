@@ -14,3 +14,4 @@ from .instruments.EastChangingP7050 import EastChangingP7050
 if importlib.util.find_spec("clr"):
     from .instruments.QuantumDesign import QuantumDesignDynaCool, QuantumDesignPPMS, QuantumDesignSVSM, QuantumDesignVersaLab
 from .instruments.Keithley7001 import Keithley7001
+from .instruments.Keithley6487 import Keithley6487

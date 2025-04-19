@@ -156,7 +156,7 @@ class exp():
         self.f.flush()
     def wait(self, t: float, inss: List[ins] = [], flags: List[waitFlag] = []):
         '''wait t (seconds) after all instruments reach their setpoints/targets'''
-        self.__flag = "Wait for "+" ".join([ins.name for ins in inss])
+        #self.__flag = "Wait for "+" ".join([ins.name for ins in inss])
         reached = len(inss)*[False]
         t0 = time.time()
         t1 = 0
@@ -171,7 +171,7 @@ class exp():
                         reached[i] = inss[i].reach(flags[i])
                     else:
                         reached[i] = reached[i] or inss[i].reach(flags[i])
-            if all(reached):
+            if all(reached) or inss == []:
                 t1 = time.time()
                 self.__flag = f"Wait {t-t1+t0:.0f}s"
             else:
