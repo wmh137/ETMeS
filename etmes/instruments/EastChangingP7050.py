@@ -1,18 +1,21 @@
+from typing import List
 from .insEnum import *
 from .ins import MagnetController
-import pyvisa as visa
+from .insio import insioVisaMsg
+import pyvisa as visa, pyvisa.constants as visaConst
 import time
 
-class EastChangingP7050(MagnetController):
+class EastChangingP7050(insioVisaMsg, MagnetController):
     def __data__(self):
         super().__data__()
         self.flag = {'output': False}
         self.error = 1
-    def __init__(self, address: str, name: str = None):
+    def __init__(self, address: str, name: str = "EC P7050"):
         super().__init__(address, name, insType.visa)
     def insInit(self):
-        self.res.baud_rate = 9600
-        self.res.parity = visa.constants.Parity(1)
+        if isinstance(self.res, visa.resources.SerialInstrument):
+            self.res.baud_rate = 9600
+            self.res.parity = visaConst.Parity.odd
         self.res.write_termination = ""
         self.res.read_termination = "\n"
         self.res.write(":REN\n")
@@ -40,9 +43,9 @@ class EastChangingP7050(MagnetController):
             return f"{self.now['H(Oe)']:>+18.2f}Oe"
         else:
             return super().now2str()
-    def now2record(self) -> str:
+    def now2record(self) -> List[str]:
         if not (self.now['H(Oe)'] == None):
-            return f"{self.now['H(Oe)']:>+7.2f}"
+            return [f"{self.now['H(Oe)']:>+7.2f}"]
         else:
             return super().now2record()
     # set

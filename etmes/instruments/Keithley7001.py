@@ -1,7 +1,7 @@
+from typing import Dict, List, Union, Literal
 from .insEnum import *
 from .ins import ins
-import pyvisa as visa
-from typing import List, Union
+from .insio import insioVisaMsg
 
 class cardType(Enum):
     none = "none"
@@ -22,9 +22,9 @@ class card():
         self.channel = [[False for _ in range(self.size[1])] for _ in range(self.size[0])]
     def flag2str(self):
         return f" {self.size[0]:>1d}x{self.size[1]:>2d}{self.name:>5s}"
-    def now2str(self, flag: int):
+    def now2str(self, flag: Literal[0, 1]):
         if flag == 0:
-            row = [i for i in range(0, int(self.size[0]/2+0.6))]
+            row = [i for i in range(int(self.size[0]/2+0.6))]
         elif flag == 1:
             row = [i for i in range(int(self.size[0]/2+0.6), self.size[0])]
         s = ""
@@ -42,7 +42,7 @@ class card():
             return f"{c[0]}{c[1]:02d}"
         else:
             return f"{c[0]}!{c[1]}!{c[2]}"
-    def __col2str__(self, col):
+    def __col2str__(self, col: List[bool]) -> str:
         if col == [False, False] or col ==[False]:
             return " "
         elif col == [True, False]:
@@ -51,8 +51,11 @@ class card():
             return "▖"
         elif col == [True, True] or col == [True]:
             return "▌"
+        else:
+            raise ValueError("Invalid channel state in card")
 
-class Keithley7001(ins):
+class Keithley7001(insioVisaMsg, ins):
+    now: Dict[str, card]
     def __data__(self):
         super().__data__()
         self.now = {'card1': card(), 'card2': card()}
@@ -62,8 +65,8 @@ class Keithley7001(ins):
     def insInit(self):
         self.res.write_termination = ""
         self.res.read_termination = "\n"
-        self.now['card1'] = card(self.res.query(":CONF:SLOT:CTYP?\n")[1:])
-        self.now['card2'] = card(self.res.query(":CONF:SLOT2:CTYP?\n")[1:])
+        self.now['card1'] = card(self.query(":CONF:SLOT:CTYP?\n")[1:])
+        self.now['card2'] = card(self.query(":CONF:SLOT2:CTYP?\n")[1:])
         self.getNow()
     def stop(self):
         return super().stop()
@@ -71,7 +74,7 @@ class Keithley7001(ins):
     def getNow(self):
         for i in range(2):
             self.now[f'card{i+1}'].chinit()
-        stateStr = self.res.query("CLOS:STAT?\n")[2:-1]
+        stateStr = self.query("CLOS:STAT?\n")[2:-1]
         self.state = stateStr
         if stateStr == "":
             return
@@ -95,17 +98,26 @@ class Keithley7001(ins):
         return [self.now['card1'].now2record(), self.now['card2'].now2record()]
     # set
     def openChannel(self, channel: Union[List[List[int]], str]):
-        self.res.write(":OPEN "+self.__ch2str__(channel)+"\n")
+        if type(channel) == list:
+            channel = self.__ch2str__(channel)
+        elif type(channel) == str:
+            pass
+        else:
+            raise TypeError("Channel must be a list of lists or a string")
+        self.write(":OPEN "+channel+"\n")
     def closeChannel(self, channel: Union[List[List[int]], str]):
-        self.res.write(":CLOS "+self.__ch2str__(channel)+"\n")
+        if type(channel) == list:
+            channel = self.__ch2str__(channel)
+        elif type(channel) == str:
+            pass
+        else:
+            raise TypeError("Channel must be a list of lists or a string")
+        self.write(":CLOS "+channel+"\n")
     def setChannel(self, channel: Union[List[List[int]], str]):
         self.openChannel("all")
         self.closeChannel(channel)
     # others
-    def __ch2str__(self, channel: Union[List[List[int]], str]):
-        if type(channel) == str:
-            return channel
-        else:
-            chStr = ""
-            chStr += ",".join([self.now[f'card{c[0]+1}'].ch2str(c) for c in channel])
-            return "(@"+chStr+")"
+    def __ch2str__(self, channel: List[List[int]]) -> str:
+        chStr = ""
+        chStr += ",".join([self.now[f'card{c[0]+1}'].ch2str(c) for c in channel])
+        return "(@"+chStr+")"

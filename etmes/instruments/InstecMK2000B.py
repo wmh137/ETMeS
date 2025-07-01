@@ -1,14 +1,15 @@
+from typing import Union, Literal
 from .insEnum import *
 from .ins import TempController
-import pyvisa as visa
-from enum import IntEnum
+from .insio import insioVisaMsg
 
-class CH(eEnum):
+class CH(int, eEnum):
+    none = -1 # unknown
     HO = 0 # Heat Only
     HC = 1 # Heat and Cool
     CO = 2 # Cool Only
 
-class InstecMK2000B(TempController):
+class InstecMK2000B(insioVisaMsg, TempController):
     def __data__(self):
         super().__data__()
         self.flag = {'CH': None}
@@ -20,15 +21,15 @@ class InstecMK2000B(TempController):
     def insInit(self):
         self.res.write_termination = ""
         self.res.read_termination = "\r\n"
-        self.flag['CH'] = int(self.res.query("TEMP:CHSW?\n"))
-        self.setpoint['setpoint'] = float(self.res.query("TEMP:SPO?\n"))+273.15
-        self.setpoint['rate'] = float(self.res.query("TEMP:RAT?\n"))
+        self.flag['CH'] = CH(int(self.query("TEMP:CHSW?\n")))
+        self.setpoint['setpoint'] = float(self.query("TEMP:SPO?\n"))+273.15
+        self.setpoint['rate'] = float(self.query("TEMP:RAT?\n"))
     def stop(self):
-        self.res.write("TEMP:STOP\n")
+        self.write("TEMP:STOP\n")
     # get & check
     def getNow(self):
-        self.now['T(K)'] = float(self.res.query("TEMP:RTIN?\n").split(":")[2])+273.15
-        self.now['power(%)'] = float(self.res.query("TEMP:POW?\n"))*100
+        self.now['T(K)'] = float(self.query("TEMP:RTIN?\n").split(":")[2])+273.15
+        self.now['power(%)'] = float(self.query("TEMP:POW?\n"))*100
     def reach(self, flag = waitFlag.stable):
         return super().reach(flag)
     # show & record
@@ -48,9 +49,10 @@ class InstecMK2000B(TempController):
         return r
     # set
     def setTemp(self, setpoint: float, rate: float):
-        self.res.write(f"TEMP:RAMP {setpoint-273.15:f},{rate:f}\n")
+        self.write(f"TEMP:RAMP {setpoint-273.15:f},{rate:f}\n")
         self.setpoint['setpoint'] = setpoint
         self.setpoint['rate'] = abs(rate)
-    def setCH(self, flag: CH):
-        self.res.write(f"TEMP:CHSW {flag.value:d}\n")
+    def setCH(self, flag: Union[CH, Literal['HO', 'HC', 'CO']]):
+        flag = CH(flag)
+        self.write(f"TEMP:CHSW {flag.value:d}\n")
         self.flag['CH'] = flag

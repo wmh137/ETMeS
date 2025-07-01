@@ -1,7 +1,8 @@
 from .insEnum import insType, waitFlag
-from typing import Union, List
+from typing import Dict, Union, List, Any
 from abc import ABC, abstractmethod
-import pyvisa as visa
+
+
 
 class ins(ABC):
     '''
@@ -16,12 +17,16 @@ class ins(ABC):
         type : insType
             type of the instrument
     '''
+    flag: Dict[str, Any]
+    setpoint: Dict[str, Any]
+    now: Dict[str, Any]
+    res: Any
     @abstractmethod
     def __data__(self):
         self.flag = {}
         self.setpoint = {}
         self.now = {}
-    def __init__(self, address: str, name: str = None, type: insType = insType.other):
+    def __init__(self, address: str, name: str = "ins", type: insType = insType.other):
         self.address = address
         if name:
             self.name = name
@@ -33,21 +38,17 @@ class ins(ABC):
         self.log = ""
         self.__data__()
     # basic o/i
-    def write(self, cmd: str): # (override necessary for non-visa instrument)
-        if self.type == insType.visa:
-            self.res.write(cmd)
-        else:
-            raise Exception(f"{self.__class__.__name__}.write() not defined!")
-    def query(self, cmd: str) -> str: # override (necessary for non-visa instrument)
-        if self.type == insType.visa:
-            return self.res.query(cmd)
-        else:
-            raise Exception(f"{self.__class__.__name__}.query() not defined!")
-    # ins open and close
-    def open(self): # (override necessary for non-visa instrument)
-        raise Exception(f"{self.__class__.__name__}.open() not defined!")
-    def close(self): # (override necessary for non-visa instrument)
-        raise Exception(f"{self.__class__.__name__}.close() not defined!")
+    @abstractmethod
+    def write(self, cmd: str):
+        return
+    @abstractmethod
+    def query(self, cmd: str) -> str:
+        return ""
+    # ins close
+    @abstractmethod
+    def close(self):
+        pass
+    @abstractmethod
     def insInit(self):
         pass
     @abstractmethod
@@ -79,16 +80,17 @@ class ins(ABC):
 class SMU(ins):
     # set
     @abstractmethod
-    def setSrc(src: float): # override
+    def setSrc(self, source: float): # override
         pass
 
 class TempController(ins):
+    targetpoint: Union[float, None]
     @abstractmethod
     def __data__(self):
         self.setpoint = {'setpoint': None, 'rate': None}
-        self.now = {'T(K)': None}
+        self.now = {'T(K)': 0.0}
         self.targetpoint = None # temperature target
-        self.error = None
+        self.error = 0.0
     @abstractmethod
     def reach(self, flag: waitFlag = waitFlag.stable) -> bool:
         flag = waitFlag(flag)
@@ -118,6 +120,8 @@ class MagnetController(ins):
         self.error = None
     @abstractmethod
     def reach(self, flag: waitFlag = waitFlag.stable) -> bool:
+        if self.setpoint['setpoint'] == None or self.now['H(Oe)'] == None:
+            return True
         flag = waitFlag(flag)
         if flag == waitFlag.stable:
             return abs(self.now['H(Oe)'] - self.setpoint['setpoint']) < self.error

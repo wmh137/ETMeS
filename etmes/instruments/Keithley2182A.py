@@ -1,8 +1,9 @@
+from typing import List
 from .insEnum import *
 from .ins import ins
-import pyvisa as visa
+from .insio import insioVisaMsg
 
-class Keithley2182A(ins):
+class Keithley2182A(insioVisaMsg, ins):
     def __data__(self):
         super().__data__()
         self.flag = {'channel': None}
@@ -13,13 +14,13 @@ class Keithley2182A(ins):
     def insInit(self):
         self.res.write_termination = ""
         self.res.read_termination = "\n"
-        self.res.write("*RST\n:SENS:FUNC 'VOLT'\n")
-        self.flag['channel'] = int(self.res.query(":SENS:CHAN?"))
+        self.write("*RST\n:SENS:FUNC 'VOLT'\n")
+        self.flag['channel'] = int(self.query(":SENS:CHAN?"))
     def stop(self):
         pass
     # get & check
     def getNow(self):
-        self.now['V(V)'] = float(self.res.query(":READ?\n"))
+        self.now['V(V)'] = float(self.query(":READ?\n"))
     def reach(self, flag: waitFlag = waitFlag.stable) -> bool:
         return super().reach(flag)
     # show & record
@@ -32,14 +33,14 @@ class Keithley2182A(ins):
             return f"{self.now['V(V)']:>19.5e}V"
         else:
             return 20*" "
-    def now2record(self) -> str:
+    def now2record(self) -> List[str]:
         if not ((self.now['V(V)'] == None)):
             return [f"{self.now['V(V)']:>.8e}"]
         else:
             return super().now2record()
     # set
     def setChannel(self, flag: int):
-        self.res.write(f":SENS:CHAN {flag:d}\n:SENS:VOLT:RANG:AUTO ON\n")
+        self.write(f":SENS:CHAN {flag:d}\n:SENS:VOLT:RANG:AUTO ON\n")
         self.flag['channel'] = flag
     def setNPLC(self, n: float):
-        self.res.write(f":SENS:VOLT:NPLC {n:f}\n")
+        self.write(f":SENS:VOLT:NPLC {n:f}\n")

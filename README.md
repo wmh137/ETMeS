@@ -21,7 +21,7 @@ Basic usage of python is enough !
 You need to write code as follow steps:
 
 1. instantiate all the classes of your instruments
-`k = etmes.Keithley2400("GPIB:xxxx")`
+`k = etmes.Keithley2400("GPIB::xxxx::INSTR")`
 1. instantiate a experiment with your instruments and path of data file
 `exp = etmes.etmes([k], "data")`
 1. control instruments as you want
@@ -35,7 +35,7 @@ Following principles should be followed:
 `exp.refresh()`
 - record the status manually as well
 `exp.record()`
-- if the class of your instrument is not applied, please write it by yourself: inherit `class ins` or its subclass, override necessary functions and define specific functions of your instrument
+- if the class of your instrument is not applied, please write it by yourself: inherit `class ins` and `class insio` or their subclasses, override necessary functions and define specific functions of your instrument
 
 Some measurements are applied in `etmes.meas`. Instantiate a measurement `m = etmes.meas(exp)` and call its functions.
 

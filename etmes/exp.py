@@ -47,13 +47,10 @@ class exp():
             self.f = open(dataFile, "w")
         self.__flag = ""
         self.__setpoint = ""
-        if not debug:
-            self.start()
+        self.start()
     def __addIns(self, ins: ins):
         if ins.type == insType.visa:
             ins.res = self.__rm['visa'].open_resource(ins.address)
-        else:
-            ins.open()
         ins.insInit()
     def logWrite(self, log: str):
         self.__log.write(f"{self.__t:f} {log}\n")
@@ -71,6 +68,7 @@ class exp():
         if self.f != None:
             self.f.write("\n".join([
                 f"[Header]",
+                "ETMeS https://git.lug.ustc.edu.cn/furnacemantoolkit/etmes",
                 f"Time Stamp: {self.__t:f}",
                 f"Time: {time.strftime('%Y/%m/%d %H:%M:%S', time.localtime(self.__t0))}",
                 f"Instruments: {', '.join([ins.name for ins in self.instruments.keys()])}",
@@ -89,12 +87,10 @@ class exp():
         '''stop all instruments'''
         for ins in self.instruments:
             ins.stop()
-            if ins.type == insType.visa:
-                ins.res.close()
-            else:
-                ins.close()
+            ins.close()
         self.__rm['visa'].close()
-        self.f.close()
+        if self.f != None:
+            self.f.close()
     def setInterval(self, t: float):
         self.__interval = t
     def setFlag(self, flag: str):
@@ -156,7 +152,6 @@ class exp():
         self.f.flush()
     def wait(self, t: float, inss: List[ins] = [], flags: List[waitFlag] = []):
         '''wait t (seconds) after all instruments reach their setpoints/targets'''
-        #self.__flag = "Wait for "+" ".join([ins.name for ins in inss])
         reached = len(inss)*[False]
         t0 = time.time()
         t1 = 0

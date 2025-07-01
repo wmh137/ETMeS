@@ -23,7 +23,7 @@ class meas():
                 break
             func()
             time.sleep(interval)
-    def SMUsrc(self, src: List[float], SMU: SMU, delay: float = 0, pulse: bool = True):
+    def SMUsrc(self, src: List[float], SMU: SMU, delay: float = 0.1, pulse: bool = True):
         '''
         SMU source in order.
 

@@ -1,7 +1,9 @@
 from .insEnum import *
 from .ins import ins, TempController, MagnetController
+from .insio import insioNone
 import clr, time
 from abc import abstractmethod
+from typing import List
 
 clr.AddReference("etmes/instruments/QDInstrument")
 
@@ -16,7 +18,11 @@ class QDFieldApproach(eEnum):
     NoOvershoot = QDInstrumentBase.FieldApproach.NoOvershoot
     Oscillate = QDInstrumentBase.FieldApproach.Oscillate
 
-class QDTempController(TempController):
+class vIns(insioNone):
+    def insInit(self):
+        pass
+
+class QDTempController(vIns, TempController):
     def __data__(self):
         super().__data__()
         self.error = 0.05
@@ -65,8 +71,8 @@ class QDTempController(TempController):
             return s + f" {self.res.TemperatureStatusString(self.now['T(K)'][2]):>.4s}"
         else:
             return 11*" "
-    def now2record(self):
-        pass
+    def now2record(self) -> List[str]:
+        return []
     # set
     def setTemp(self, setpoint: float, rate: float, approach: QDTempApproach = QDTempApproach.FastSettle):
         approach = QDTempApproach(approach)
@@ -74,7 +80,7 @@ class QDTempController(TempController):
         self.setpoint['setpoint'] = [setpoint, approach]
         self.setpoint['rate'] = rate
 
-class QDMagnetController(MagnetController):
+class QDMagnetController(vIns, MagnetController):
     def __data__(self):
         super().__data__()
         self.error = 1
@@ -108,8 +114,8 @@ class QDMagnetController(MagnetController):
             return f"{self.now['H(Oe)'][1]:>+7.0f}Oe {self.res.FieldStatusString(self.now['H(Oe)'][2]):>.4s}"
         else:
             return 14*" "
-    def now2record(self):
-        pass
+    def now2record(self) -> List[str]:
+        return []
     # set
     def setField(self, setpoint: float, rate: float, approach: QDFieldApproach = QDFieldApproach.Linear):
         approach = QDFieldApproach(approach)
@@ -117,7 +123,7 @@ class QDMagnetController(MagnetController):
         self.setpoint['setpoint'] = [setpoint, approach]
         self.setpoint['rate'] = rate
 
-class QDRotator(ins):
+class QDRotator(vIns, ins):
     def __data__(self):
         super().__data__()
         self.setpoint = {'setpoint': None, 'rate': None}
@@ -153,15 +159,15 @@ class QDRotator(ins):
             return f"{self.now['Pos(deg)'][1]:>5.1f}Dg"
         else:
             return 7*" "
-    def now2record(self):
-        pass
+    def now2record(self) -> List[str]:
+        return []
     # set
     def setPosition(self, setpoint: float, rate: float, mode: QDInstrumentBase.PositionMode = QDInstrumentBase.PositionMode.MoveToPosition):
         self.res.SetPosition("Horizontal Rotator", setpoint, rate, mode)
         self.setpoint['setpoint'] = [setpoint]
         self.setpoint['rate'] = rate
 
-class QDChamber(ins):
+class QDChamber(vIns, ins):
     def __data__(self):
         super().__data__()
         self.setpoint = {'setpoint' : None}
@@ -178,28 +184,34 @@ class QDChamber(ins):
         return int(self.now['Chamber'][1]) in [1, 2, 3, 7, 8, 9]
     # show & record
     def flag2str(self) -> str:
-        pass
+        return ""
     def setpoint2str(self) -> str:
-        pass
+        return ""
     def now2str(self) -> str:
         if self.now['Chamber'] is not None:
             return f"{self.res.ChamberStatusString(self.now['Chamber'][1]):>.5s}"
         else:
             return 5*" "
-    def now2record(self):
-        pass
+    def now2record(self) -> List[str]:
+        return []
     # set
     def setChamber(self, command: QDInstrumentBase.ChamberCommand):
         self.res.SetChamber(command)
         self.setpoint['setpoint'] = command
 
-class QuantumDesign(ins):
+class QuantumDesign(insioNone, ins):
+    T: QDTempController
+    M: QDMagnetController
+    R: QDRotator
+    C: QDChamber
     def __data__(self):
         super().__data__()
+        '''
         self.T = None
         self.M = None
         self.R = None
         self.C = None
+        '''
         self.now = {}
         self.__lastgetNowTime = 0.0
     @abstractmethod
@@ -207,14 +219,14 @@ class QuantumDesign(ins):
         super().__init__(address, name, insType.other)
         self.type = type
         self.port = port
-    def open(self):
+    def insInit(self):
         self.res = QDInstrumentFactory.GetQDInstrument(self.type, True, self.address, self.port)
         self.T = QDTempController(self)
         self.M = QDMagnetController(self)
         self.R = QDRotator(self)
         self.C = QDChamber(self)
         self.getNow()
-    def close(self):# in build
+    def close(self):
         pass
     def stop(self):
         pass
@@ -245,7 +257,7 @@ class QuantumDesign(ins):
     def now2str(self) -> str:
         s = "|".join([self.T.now2str(), self.M.now2str(), self.R.now2str(), self.C.now2str()])
         return s
-    def now2record(self) -> str:
+    def now2record(self) -> List[str]:
         r = []
         if self.T.now['T(K)'] is not None:
             r.append(f"{self.T.now['T(K)'][1]:>.5f}")
