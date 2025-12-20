@@ -13,8 +13,9 @@ Basic usage of python is enough !
 ## Requirement
 
 - Windows >= 10 (Powershell on Windows 7 does not support ANSI escape codes)
-- python >= 3.8, pyvisa, pythonnet (optional), matplotlib (optional)
-- .NET
+- python >= 3.8, pyvisa, pythonnet and .NET Runtime (optional), matplotlib (optional)
+- NI-VISA
+- QDInstrument.dll (install from [qdusa.com](https://qdusa.com) and copy to etmes/instruments)
 
 ## Basic usage
 
@@ -52,9 +53,9 @@ We are inspired by [labdrivers](https://github.com/masonlab/labdrivers), and gra
 
 ## Contributors
 
-[Minghao Wang](wmh137@mail.ustc.edu.cn) (Founder)
+[Minghao Wang](mailto:wmh137@mail.ustc.edu.cn) (Founder)
 
-[Ming Huang](hm2018@mail.ustc.edu.cn)
+[Ming Huang](mailto:hm2018@mail.ustc.edu.cn)
 
 [Huan Shen]()
 

@@ -1,6 +1,10 @@
+*.dll
 *.dat
 *.log
+*.csv
+*.tmp
 /*.py
 __pycache__
+.vscode
 .stfolder
 .stignore
