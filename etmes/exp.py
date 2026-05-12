@@ -91,6 +91,7 @@ class exp():
         self.__rm['visa'].close()
         if self.f != None:
             self.f.close()
+        self.__log.close()
     def setInterval(self, t: float):
         self.__interval = t
     def setFlag(self, flag: str):

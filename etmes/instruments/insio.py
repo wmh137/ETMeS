@@ -29,4 +29,5 @@ class insioVisaMsg(insio):
     def query(self, cmd: str) -> str:
         return self.res.query(cmd)
     def close(self):
+        self.write("SYST:LOC")
         self.res.close()
