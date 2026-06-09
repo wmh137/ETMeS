@@ -84,9 +84,8 @@ class exp():
         else:
             self.logWrite("Save to None")
     def stop(self):
-        '''stop all instruments'''
+        '''stop experiment'''
         for ins in self.instruments:
-            ins.stop()
             ins.close()
         self.__rm['visa'].close()
         if self.f != None:
@@ -101,8 +100,7 @@ class exp():
         for ins, value in self.instruments.items():
             if not value[0]:
                 continue
-            th = threading.Thread(target=ins.getNow)
-            th.setDaemon(True)
+            th = threading.Thread(target=ins.getNow, daemon=True)
             threads.append(th)
             th.start()
         for th in threads:
